@@ -1,0 +1,8 @@
+{
+  "name": "commit-hook",
+  "description": "Runs the commands configured in COMMIT_HOOK_COMMANDS before Claude commits, and blocks the commit if any of them fail.",
+  "author": {
+    "name": "PrAha, Inc.",
+    "url": "https://praha-inc.com"
+  }
+}

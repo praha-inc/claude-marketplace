@@ -1,0 +1,9 @@
+{
+  "name": "praha-claude-marketplace",
+  "description": "A Claude Code plugins for the PrAha, Inc.",
+  "owner": {
+    "name": "PrAha, Inc.",
+    "url": "https://praha-inc.com"
+  },
+  "plugins": []
+}

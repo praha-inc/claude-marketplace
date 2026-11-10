@@ -9,6 +9,10 @@
     {
       "name": "commit-hook",
       "source": "./plugins/commit-hook"
+    },
+    {
+      "name": "issue-planner",
+      "source": "./plugins/issue-planner"
     }
   ]
 }

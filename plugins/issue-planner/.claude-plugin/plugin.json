@@ -1,0 +1,8 @@
+{
+  "name": "issue-planner",
+  "description": "Interviews you about what you want to achieve, investigates the codebase and related repositories, and creates a GitHub issue with sub-issues that each map to one pull request.",
+  "author": {
+    "name": "PrAha, Inc.",
+    "url": "https://praha-inc.com"
+  }
+}

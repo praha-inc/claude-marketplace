@@ -5,5 +5,10 @@
     "name": "PrAha, Inc.",
     "url": "https://praha-inc.com"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "commit-hook",
+      "source": "./plugins/commit-hook"
+    }
+  ]
 }

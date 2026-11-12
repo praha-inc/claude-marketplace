@@ -75,7 +75,7 @@ jobs:
 
 - `id-token: write` lets the action obtain the Claude GitHub App's token, which is what makes the review appear as `claude[bot]`. The next review recognises its earlier comments by that author.
 - `claude_code_oauth_token` can be used in place of `anthropic_api_key`.
-- The allowed tools are what the skill needs: `Skill` and `Agent` to run the two review skills, `gh` to read and post the review, `git` to inspect the change, `node` to run the plugin's scripts, and `Write` and `Edit` for the review file.
+- The allowed tools are what the skill needs: `Skill` and `Agent` to run the two review skills, `gh` to read and post the review, `git` to inspect the change, `node` to run the plugin's scripts, and `Write` and `Edit` for the review file, which is written to a temporary directory.
 - The workflow reads the content of the pull request, so keep its permissions as narrow as above. Pull requests from forks do not receive the secrets and are not reviewed.
 
 ## How it works
@@ -109,7 +109,7 @@ A thread or summary counts as an earlier review's when `claude[bot]` wrote it, o
 - The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to pull requests, and Node.js 22.18 or later available as `node`, because its scripts are TypeScript files run with Node.js type stripping.
 - The working tree must be the code of the pull request. The skill runs `gh pr checkout` when the tree is clean, and stops when there are uncommitted changes or unpushed commits.- GitHub does not accept an approval or a request for changes on your own pull request, and some CI tokens may comment but not approve. In both cases the review is posted as a comment whose summary states the verdict.
 - A finding on a line that is not part of the diff is posted on the file instead, or in the summary when the file is not in the diff either.
-- The review file is written to `.claude/pr-reviewer/` and deleted after posting.
+- The review file is written to a temporary directory outside the repository and deleted after posting.
 
 ## Disabling
 

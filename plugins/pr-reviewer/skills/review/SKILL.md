@@ -87,7 +87,7 @@ Write each comment for someone who sees only that comment: what is wrong, why it
 
 ## 5. Write the review file
 
-Write the review to `.claude/pr-reviewer/review-<number>.json`:
+Create a directory for the review file with `mktemp -d`, and write the review to `review.json` in it. The file is kept out of the repository on purpose: an untracked file in the working tree would count as an uncommitted change if you have to return to step 1, and could be committed by accident if the run stops halfway.
 
 ```json
 {
@@ -136,7 +136,7 @@ Keep the `summary` to two or three sentences: what the change does in your own w
 Check the file first. This reads from GitHub but posts nothing:
 
 ```sh
-node "${CLAUDE_SKILL_DIR}/scripts/submit-review.ts" --dry-run .claude/pr-reviewer/review-<number>.json
+node "${CLAUDE_SKILL_DIR}/scripts/submit-review.ts" --dry-run <directory>/review.json
 ```
 
 Fix whatever it reports. If it says the pull request has new commits since `headSha`, go back to step 1: the review has to be about the code that is there now.
@@ -144,11 +144,11 @@ Fix whatever it reports. If it says the pull request has new commits since `head
 Then post it:
 
 ```sh
-node "${CLAUDE_SKILL_DIR}/scripts/submit-review.ts" .claude/pr-reviewer/review-<number>.json
+node "${CLAUDE_SKILL_DIR}/scripts/submit-review.ts" <directory>/review.json
 ```
 
 Being asked to run this skill is the request to post, so do not ask for confirmation again. The script posts everything as one review, so the author gets one notification: the replies to earlier threads, the new comments, and the verdict with the summary. It then resolves the threads marked `resolved` and hides the summaries of earlier reviews as outdated.
 
 Do not run it a second time after it succeeds, as that would post the same comments again. If it fails, it removes what it had started, so after fixing the cause it is safe to run again.
 
-Finish by telling the user the URL of the review, the verdict, how many findings there were at each severity, and how many earlier threads were resolved and how many stay open. Pass on any `Warning:` lines from the script: a finding that could not be attached to its line was posted on the file or in the summary instead, and a verdict GitHub did not accept (on your own pull request, or with a token that may not approve) was posted as a comment that states the verdict. Then delete the review file.
+Finish by telling the user the URL of the review, the verdict, how many findings there were at each severity, and how many earlier threads were resolved and how many stay open. Pass on any `Warning:` lines from the script: a finding that could not be attached to its line was posted on the file or in the summary instead, and a verdict GitHub did not accept (on your own pull request, or with a token that may not approve) was posted as a comment that states the verdict. Then delete the directory of the review file.

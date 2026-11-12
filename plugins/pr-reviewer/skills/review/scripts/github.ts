@@ -91,6 +91,8 @@ export const REVIEW_DIRECTORY_PREFIX = 'pr-reviewer-';
 export const SUMMARY_MARKER = '<!-- pr-reviewer:summary -->';
 
 const FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->/;
+/** The marker `formatFinding` writes: the one that ends the comment, not one the text of the finding may quote. */
+const FINAL_FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->\s*$/;
 const REPOSITORY = /^(?:([\w.-]+)\/)?([\w.-]+)\/([\w.-]+)$/;
 const DEFAULT_HOST = 'github.com';
 const PULL_REQUEST_URL = /^https:\/\/([\w.-]+)\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/;
@@ -117,7 +119,7 @@ export const formatFinding = (severity: Severity, body: string): string => {
  * comments whose marker was lost, for example when someone edited the comment.
  */
 export const parseSeverity = (body: string): Severity | null => {
-  const marked = FINDING_MARKER.exec(body)?.[1];
+  const marked = FINAL_FINDING_MARKER.exec(body)?.[1];
   if (isSeverity(marked)) {
     return marked;
   }

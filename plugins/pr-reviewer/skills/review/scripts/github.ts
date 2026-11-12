@@ -18,11 +18,18 @@ export type OpenThread = {
   path: string;
   /** The line the thread is attached to, or null when that line is no longer part of the diff. */
   line: number | null;
+  /** The line the thread was left on, in the version of the file that was reviewed then. */
+  originalLine: number | null;
+  /** The part of the diff the finding was left on, which helps to find the code after it moved. */
+  diffHunk: string;
   /** Whether the code the thread was left on has changed since. */
   isOutdated: boolean;
   /** The severity of the original finding, or null when the comment does not carry one. */
   severity: Severity | null;
+  /** The finding followed by the replies. Of a very long thread, only the finding and the newest replies. */
   comments: { author: string; createdAt: string; body: string }[];
+  /** How many replies between the finding and the newest ones were left out. */
+  omittedComments: number;
 };
 
 export type PreviousSummary = {
@@ -163,15 +170,17 @@ type AuthorNode = { login: string; __typename: string } | null;
 
 type PageInfo = { hasNextPage: boolean; endCursor: string | null };
 
+type CommentNode = { url: string; body: string; createdAt: string; author: AuthorNode };
+
 type ThreadNode = {
   id: string;
   isResolved: boolean;
   isOutdated: boolean;
   path: string;
   line: number | null;
-  comments: {
-    nodes: { url: string; body: string; createdAt: string; author: AuthorNode }[];
-  };
+  originalLine: number | null;
+  finding: { nodes: (CommentNode & { diffHunk: string })[] };
+  replies: { totalCount: number; nodes: CommentNode[] };
 };
 
 type ReviewNode = {
@@ -214,8 +223,12 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
       reviewThreads(first: 50, after: $cursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          id isResolved isOutdated path line
-          comments(first: 50) {
+          id isResolved isOutdated path line originalLine
+          finding: comments(first: 1) {
+            nodes { url body createdAt diffHunk author { login __typename } }
+          }
+          replies: comments(last: 50) {
+            totalCount
             nodes { url body createdAt author { login __typename } }
           }
         }
@@ -321,8 +334,8 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
   };
 
   const threads = fetchAll<ThreadNode>(THREADS_QUERY, variables, (node) => node['reviewThreads']).filter((thread) => {
-    const first = thread.comments.nodes[0];
-    return first !== undefined && isOurs(first.author, first.body);
+    const finding = thread.finding.nodes[0];
+    return finding !== undefined && isOurs(finding.author, finding.body);
   });
 
   const reviews = fetchAll<ReviewNode>(REVIEWS_QUERY, variables, (node) => node['reviews']);
@@ -346,19 +359,27 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
     viewer,
     openThreads: threads
       .filter((thread) => !thread.isResolved)
-      .map((thread) => ({
-        id: thread.id,
-        url: thread.comments.nodes[0]?.url ?? '',
-        path: thread.path,
-        line: thread.line,
-        isOutdated: thread.isOutdated,
-        severity: parseSeverity(thread.comments.nodes[0]?.body ?? ''),
-        comments: thread.comments.nodes.map((comment) => ({
-          author: toAuthor(comment.author).login,
-          createdAt: comment.createdAt,
-          body: comment.body,
-        })),
-      })),
+      .map((thread) => {
+        // The newest comments matter most for a follow-up, so those are what a long thread keeps besides its finding.
+        const finding = thread.finding.nodes[0];
+        const replies = thread.replies.nodes.filter((comment) => comment.url !== finding?.url);
+        return {
+          id: thread.id,
+          url: finding?.url ?? '',
+          path: thread.path,
+          line: thread.line,
+          originalLine: thread.originalLine,
+          diffHunk: finding?.diffHunk ?? '',
+          isOutdated: thread.isOutdated,
+          severity: parseSeverity(finding?.body ?? ''),
+          comments: [...(finding ? [finding] : []), ...replies].map((comment) => ({
+            author: toAuthor(comment.author).login,
+            createdAt: comment.createdAt,
+            body: comment.body,
+          })),
+          omittedComments: thread.replies.totalCount - 1 - replies.length,
+        };
+      }),
     resolvedThreadCount: threads.filter((thread) => thread.isResolved).length,
     previousSummaries: reviews
       .filter((review) => !review.isMinimized && review.state !== 'PENDING' && review.body.includes(SUMMARY_MARKER))

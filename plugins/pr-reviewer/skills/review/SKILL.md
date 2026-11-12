@@ -29,7 +29,7 @@ node "${CLAUDE_SKILL_DIR}/scripts/fetch-review-state.ts" <url>
 It prints JSON with:
 
 - `repository` and `pullRequest`: its `number`, `state`, `headSha`, `headRef`, `baseRef` and `author`.
-- `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the whole conversation in `comments`.
+- `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the conversation in `comments`, starting with the finding. When the code changed, `line` is `null`, and `originalLine` and `diffHunk` show where the finding was left and what the code looked like then.
 - `previousSummaries`: the summaries of earlier reviews that are still visible.
 
 Stop if the pull request is not `OPEN`, and say so.

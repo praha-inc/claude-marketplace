@@ -53,6 +53,8 @@ export type ReviewState = {
   resolvedThreadCount: number;
   /** Summaries of earlier reviews that are still visible. */
   previousSummaries: PreviousSummary[];
+  /** Earlier reviews that requested changes and have not been dismissed. */
+  changesRequested: { id: string; url: string }[];
 };
 
 export const SEVERITIES: Record<Severity, { emoji: string; label: string }> = {
@@ -347,6 +349,9 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
       .filter((review) => !review.isMinimized && review.state !== 'PENDING' && review.body.includes(SUMMARY_MARKER))
       .filter((review) => isOurs(review.author, review.body))
       .map((review) => ({ id: review.id, url: review.url, state: review.state, submittedAt: review.submittedAt })),
+    changesRequested: reviews
+      .filter((review) => review.state === 'CHANGES_REQUESTED' && isOurs(review.author, review.body))
+      .map((review) => ({ id: review.id, url: review.url })),
   };
 };
 

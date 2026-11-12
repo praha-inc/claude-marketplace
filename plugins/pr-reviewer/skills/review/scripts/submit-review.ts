@@ -7,6 +7,9 @@
  * 4. resolves the threads that were addressed, and
  * 5. hides the summaries of earlier reviews as outdated.
  *
+ * When GitHub does not accept the verdict from this account, the review is posted as a
+ * comment that states it, and an approval dismisses the account's earlier requests for changes.
+ *
  * The verdict is derived from the findings rather than taken from the file: the review
  * requests changes when a new finding, or a thread that is still open, must be fixed.
  *
@@ -309,6 +312,13 @@ mutation($subjectId: ID!) {
  * that, and a real failure (rate limit, network, permissions) throws and fails the run
  * instead of being mistaken for it.
  */
+const DISMISS_REVIEW = `
+mutation($reviewId: ID!, $message: String!) {
+  dismissPullRequestReview(input: { pullRequestReviewId: $reviewId, message: $message }) {
+    pullRequestReview { state }
+  }
+}`;
+
 const addThread = (input: Record<string, unknown>): boolean => {
   const data = graphql<{ addPullRequestReviewThread: { thread: { id: string } | null } | null }>(ADD_THREAD, { input });
   return Boolean(data.addPullRequestReviewThread?.thread);
@@ -439,6 +449,18 @@ const main = (): number => {
         graphql(RESOLVE_THREAD, { threadId: thread.id });
       } catch (error) {
         warnings.push(`Could not resolve the thread ${thread.url}: ${message(error)}`);
+      }
+    }
+
+    // A comment does not replace an earlier request for changes, which would keep blocking the
+    // pull request under a summary that says "Approve". Dismissing it is what an approval would have done.
+    if (verdict === 'APPROVE' && event === 'COMMENT') {
+      for (const earlier of state.changesRequested) {
+        try {
+          graphql(DISMISS_REVIEW, { reviewId: earlier.id, message: `Superseded by ${url}, which found nothing left that must be fixed.` });
+        } catch (error) {
+          warnings.push(`The earlier request for changes ${earlier.url} still blocks the pull request and could not be dismissed: ${message(error)}`);
+        }
       }
     }
 

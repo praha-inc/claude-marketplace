@@ -325,6 +325,13 @@ mutation($threadId: ID!) {
   }
 }`;
 
+const DISMISS_REVIEW = `
+mutation($reviewId: ID!, $message: String!) {
+  dismissPullRequestReview(input: { pullRequestReviewId: $reviewId, message: $message }) {
+    pullRequestReview { state }
+  }
+}`;
+
 const MINIMIZE = `
 mutation($subjectId: ID!) {
   minimizeComment(input: { subjectId: $subjectId, classifier: OUTDATED }) {
@@ -338,13 +345,6 @@ mutation($subjectId: ID!) {
  * that, and a real failure (rate limit, network, permissions) throws and fails the run
  * instead of being mistaken for it.
  */
-const DISMISS_REVIEW = `
-mutation($reviewId: ID!, $message: String!) {
-  dismissPullRequestReview(input: { pullRequestReviewId: $reviewId, message: $message }) {
-    pullRequestReview { state }
-  }
-}`;
-
 const addThread = (input: Record<string, unknown>): boolean => {
   const data = graphql<{ addPullRequestReviewThread: { thread: { id: string } | null } | null }>(ADD_THREAD, { input });
   return Boolean(data.addPullRequestReviewThread?.thread);

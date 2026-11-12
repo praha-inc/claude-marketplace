@@ -187,6 +187,14 @@ const reconcile = (review: Review, state: ReviewState): { thread: OpenThread; an
     );
   }
 
+  // A bot never drafts a review by hand, so its pending review is what an interrupted run left behind and is
+  // discarded before posting. A person's may hold comments they have not sent yet, so that is theirs to decide.
+  if (state.pendingReview && !state.pendingReview.isBot) {
+    problems.push(
+      `You have a pending review on this pull request, and GitHub allows only one at a time. Submit or discard it on ${state.pullRequest.url}/files, then run this again. If you did not start one, an interrupted run of this script left it behind and it can be discarded.`,
+    );
+  }
+
   const answers = new Map(review.threads.map((answer) => [answer.id, answer]));
   const open = new Map(state.openThreads.map((thread) => [thread.id, thread]));
   for (const id of answers.keys()) {
@@ -391,10 +399,15 @@ const main = (): number => {
           `Earlier threads answered: ${answered.length}`,
           ...answered.map(({ thread, answer }) => `  - ${answer.status === 'resolved' ? '✅ resolve' : '🔁 keep open'} ${thread.path} (${thread.id})`),
           `Earlier summaries to hide as outdated: ${state.previousSummaries.length}`,
+          ...(state.pendingReview ? ['A pending review left behind by an interrupted run will be discarded first.'] : []),
           '',
         ].join('\n'),
       );
       return 0;
+    }
+
+    if (state.pendingReview) {
+      graphql(DELETE_REVIEW, { reviewId: state.pendingReview.id });
     }
 
     // Everything goes into one pending review, so the author gets a single notification.

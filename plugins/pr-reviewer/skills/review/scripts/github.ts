@@ -53,6 +53,11 @@ export type ReviewState = {
   resolvedThreadCount: number;
   /** Summaries of earlier reviews that are still visible. */
   previousSummaries: PreviousSummary[];
+  /**
+   * A review this account started on the pull request and has not submitted. GitHub allows
+   * one per account, so a new review cannot be started while it exists.
+   */
+  pendingReview: { id: string; isBot: boolean } | null;
   /** Earlier reviews that requested changes and have not been dismissed. */
   changesRequested: { id: string; url: string }[];
 };
@@ -313,6 +318,8 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
   });
 
   const reviews = fetchAll<ReviewNode>(REVIEWS_QUERY, variables, (node) => node['reviews']);
+  // GitHub only shows a pending review to the account that started it, so one in the list is this account's.
+  const pending = reviews.find((review) => review.state === 'PENDING');
 
   return {
     repository,
@@ -349,6 +356,7 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
       .filter((review) => !review.isMinimized && review.state !== 'PENDING' && review.body.includes(SUMMARY_MARKER))
       .filter((review) => isOurs(review.author, review.body))
       .map((review) => ({ id: review.id, url: review.url, state: review.state, submittedAt: review.submittedAt })),
+    pendingReview: pending ? { id: pending.id, isBot: toAuthor(pending.author).isBot } : null,
     changesRequested: reviews
       .filter((review) => review.state === 'CHANGES_REQUESTED' && isOurs(review.author, review.body))
       .map((review) => ({ id: review.id, url: review.url })),

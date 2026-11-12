@@ -356,22 +356,25 @@ const addThread = (input: Record<string, unknown>): boolean => {
  * a whole), then the file. Every finding is on a file the pull request changes, which
  * `reconcile` checked, and GitHub accepts a comment on any such file, so each one ends up
  * in a thread.
+ *
+ * Anywhere but on its own lines, the comment names those lines and shows a suggestion as
+ * plain code, because GitHub would apply the suggestion to the lines the comment sits on.
  */
-const placeFinding = (reviewId: string, finding: Finding): 'line' | 'file' => {
+const placeFinding = (reviewId: string, finding: Finding): 'exact' | 'lastLine' | 'file' => {
   const onLine = { pullRequestReviewId: reviewId, path: finding.path, line: finding.line, side: finding.side };
   const body = formatFinding(finding.severity, finding.body);
-  if (finding.startLine && addThread({ ...onLine, startLine: finding.startLine, startSide: finding.side, body })) {
-    return 'line';
+  const moved = formatFinding(finding.severity, `\`${location(finding)}\`\n\n${withoutSuggestions(finding.body)}`);
+  if (finding.startLine) {
+    if (addThread({ ...onLine, startLine: finding.startLine, startSide: finding.side, body })) {
+      return 'exact';
+    }
+    if (addThread({ ...onLine, body: moved })) {
+      return 'lastLine';
+    }
+  } else if (addThread({ ...onLine, body })) {
+    return 'exact';
   }
-  if (addThread({ ...onLine, body })) {
-    return 'line';
-  }
-  const onFile = addThread({
-    pullRequestReviewId: reviewId,
-    path: finding.path,
-    subjectType: 'FILE',
-    body: formatFinding(finding.severity, `\`${location(finding)}\`\n\n${withoutSuggestions(finding.body)}`),
-  });
+  const onFile = addThread({ pullRequestReviewId: reviewId, path: finding.path, subjectType: 'FILE', body: moved });
   if (!onFile) {
     throw new Error(`GitHub did not accept a comment on ${finding.path}, although the pull request changes that file.`);
   }
@@ -464,7 +467,11 @@ const main = (): number => {
         graphql(ADD_REPLY, { reviewId, threadId: thread.id, body: `${THREAD_PREFIXES[answer.status]}\n\n${answer.body.trim()}` });
       }
       for (const finding of review.findings) {
-        if (placeFinding(reviewId, finding) === 'file') {
+        const placement = placeFinding(reviewId, finding);
+        if (placement === 'lastLine') {
+          warnings.push(`${location(finding)} is not part of the diff as a whole, so the finding was posted on its last line.`);
+        }
+        if (placement === 'file') {
           warnings.push(`${location(finding)} is not part of the diff, so the finding was posted on the file.`);
         }
       }

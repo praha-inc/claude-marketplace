@@ -11,14 +11,23 @@
  *        node fetch-review-state.ts <pull request number> [owner/repo]
  *
  * A URL names its repository and its host, which a number does not: with a number alone,
- * the repository of the current directory is used, on the host `gh` is configured for. To
- * name another host, such as GitHub Enterprise Server, the second form takes `host/owner/repo`.
+ * the repository of the current directory is used, with its host. To name a repository on
+ * another host, such as GitHub Enterprise Server, the second form takes `host/owner/repo`.
  */
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { fetchReviewState, gh, parsePullRequestUrl, REVIEW_DIRECTORY_PREFIX } from './github.ts';
+
+/**
+ * The repository of the current directory, with its host: `gh` finds it through the git
+ * remote, and the calls that follow would otherwise go to the host `gh` defaults to.
+ */
+const currentRepository = (): string => {
+  const url = new URL(gh(['repo', 'view', '--json', 'url', '--jq', '.url']));
+  return `${url.host}${url.pathname}`;
+};
 
 const main = (): number => {
   const [target = '', repository] = process.argv.slice(2);
@@ -32,7 +41,7 @@ const main = (): number => {
 
   try {
     const state = fetchReviewState(
-      fromUrl?.repository ?? repository ?? gh(['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']),
+      fromUrl?.repository ?? repository ?? currentRepository(),
       fromUrl?.number ?? Number(target),
     );
     const reviewFile = path.join(mkdtempSync(path.join(tmpdir(), REVIEW_DIRECTORY_PREFIX)), 'review.json');

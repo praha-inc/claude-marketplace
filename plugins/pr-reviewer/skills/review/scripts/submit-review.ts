@@ -438,7 +438,7 @@ const main = (): number => {
           ...review.findings.map((finding) => `  - ${SEVERITIES[finding.severity].emoji} ${location(finding)}`),
           `Earlier threads answered: ${answered.length}`,
           ...answered.map(({ thread, answer }) => `  - ${answer.status === 'resolved' ? '✅ resolve' : '🔁 keep open'} ${thread.path} (${thread.id})`),
-          `Earlier summaries to hide as outdated: ${finished.length} of ${state.previousSummaries.length} (the others still have open threads)`,
+          `Earlier summaries to hide as outdated: ${finished.length} of ${state.previousSummaries.length}${finished.length < state.previousSummaries.length ? ' (the others still have open threads)' : ''}`,
           ...(state.pendingReview ? ['A pending review left behind by an interrupted run will be discarded first.'] : []),
           '',
         ].join('\n'),

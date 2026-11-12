@@ -76,8 +76,9 @@ export type ReviewState = {
    */
   pendingReview: { id: string; isBot: boolean } | null;
   /**
-   * Earlier reviews by the account that posts this one which requested changes and have not been
-   * dismissed. Those of another account are left alone, as an approval would leave them.
+   * Earlier reviews by the account that posts this one which requested changes and still block:
+   * not dismissed, and not followed by an approval of that account. Those of another account
+   * are left alone, as an approval would leave them.
    */
   changesRequested: { id: string; url: string }[];
 };
@@ -405,6 +406,17 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
   });
 
   const reviews = fetchAll<ReviewNode>(REVIEWS_QUERY, variables, (node) => node['reviews']);
+  // Without a login to compare with, the token is the review bot's.
+  const isPoster = (node: AuthorNode): boolean => {
+    const author = toAuthor(node);
+    return viewer === null ? author.isBot && normalize(author.login) === REVIEW_BOT : normalize(author.login) === normalize(viewer);
+  };
+  // A review keeps the state CHANGES_REQUESTED after the same account approved, although it no longer blocks.
+  const approvedAt = reviews
+    .filter((review) => review.state === 'APPROVED' && isPoster(review.author))
+    .map((review) => review.submittedAt ?? '')
+    .toSorted()
+    .at(-1) ?? '';
   // GitHub only shows a pending review to the account that started it, so one in the list is this account's.
   const pending = reviews.find((review) => review.state === 'PENDING');
 
@@ -463,8 +475,7 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
     pendingReview: pending ? { id: pending.id, isBot: toAuthor(pending.author).isBot } : null,
     changesRequested: reviews
       .filter((review) => review.state === 'CHANGES_REQUESTED' && isOurs(review.author, review.body))
-      // Without a login to compare with, the token is the review bot's, whose reviews are the ones that passed above.
-      .filter((review) => viewer === null || normalize(toAuthor(review.author).login) === normalize(viewer))
+      .filter((review) => isPoster(review.author) && approvedAt < (review.submittedAt ?? ''))
       .map((review) => ({ id: review.id, url: review.url })),
   };
 };

@@ -80,6 +80,9 @@ export const SEVERITIES: Record<Severity, { emoji: string; label: string }> = {
   nit: { emoji: '🔵', label: 'Optional' },
 };
 
+/** The start of the name of the temporary directory that holds a review file. */
+export const REVIEW_DIRECTORY_PREFIX = 'pr-reviewer-';
+
 export const SUMMARY_MARKER = '<!-- pr-reviewer:summary -->';
 
 const FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->/;

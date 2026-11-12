@@ -13,11 +13,15 @@
  * The verdict is derived from the findings rather than taken from the file: the review
  * requests changes when a new finding, or a thread that is still open, must be fixed.
  *
+ * Once the review is posted, the file is deleted, since running the script on it a second
+ * time would post everything again.
+ *
  * Usage: node submit-review.ts [--dry-run] <review.json>
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmdirSync, rmSync } from 'node:fs';
+import path from 'node:path';
 
-import { fetchReviewState, formatFinding, graphql, isSameAccount, isSeverity, SEVERITIES, SUMMARY_MARKER } from './github.ts';
+import { fetchReviewState, formatFinding, REVIEW_DIRECTORY_PREFIX, graphql, isSameAccount, isSeverity, SEVERITIES, SUMMARY_MARKER } from './github.ts';
 
 import type { OpenThread, ReviewState, Severity } from './github.ts';
 
@@ -378,17 +382,32 @@ const message = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error);
 };
 
+/**
+ * Deletes a posted review file, and its directory when fetch-review-state.ts made it.
+ */
+const discard = (file: string): void => {
+  try {
+    rmSync(file);
+    const directory = path.dirname(path.resolve(file));
+    if (path.basename(directory).startsWith(REVIEW_DIRECTORY_PREFIX)) {
+      rmdirSync(directory);
+    }
+  } catch {
+    // The review is posted either way, and a leftover file in a temporary directory does no harm.
+  }
+};
+
 const main = (): number => {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
-  const path = args.find((arg) => !arg.startsWith('--'));
-  if (!path) {
+  const file = args.find((arg) => !arg.startsWith('--'));
+  if (!file) {
     process.stderr.write('Usage: node submit-review.ts [--dry-run] <review.json>\n');
     return 1;
   }
 
   try {
-    const review = parseReview(readFileSync(path, 'utf8'));
+    const review = parseReview(readFileSync(file, 'utf8'));
     const state = fetchReviewState(review.repository, review.pullRequest);
     const answered = reconcile(review, state);
 
@@ -505,6 +524,7 @@ const main = (): number => {
       }
     }
 
+    discard(file);
     process.stdout.write(
       [
         `Posted: ${url}`,

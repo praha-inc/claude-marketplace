@@ -16,25 +16,27 @@ Two scripts do the reading and writing on GitHub, so that the mechanical parts (
 
 ## 1. Find the pull request and check out its code
 
-Work out the pull request number: from the argument if there is one, otherwise from the current branch (`gh pr view --json number`). If there is neither, ask which pull request to review, or stop with that message when nobody can answer.
+Work out the URL of the pull request. If the argument is a URL, use it as it is. Otherwise ask GitHub: `gh pr view <number> --json url` for a number, or `gh pr view --json url` with no argument for the pull request of the current branch. If there is neither an argument nor a pull request for the branch, ask which pull request to review, or stop with that message when nobody can answer.
+
+Use the URL, not the number, in every command from here on. A number means "in the repository of the current directory", which is the wrong pull request when the user gave a URL from another repository, and can be the fork instead of the repository that owns the pull request when working in a clone of a fork. If the URL belongs to a different repository than the one in the working tree, stop and say so, because the code to review is not here.
 
 Read the state of the pull request:
 
 ```sh
-node "${CLAUDE_SKILL_DIR}/scripts/fetch-review-state.ts" <number>
+node "${CLAUDE_SKILL_DIR}/scripts/fetch-review-state.ts" <url>
 ```
 
 It prints JSON with:
 
-- `pullRequest`: its `state`, `headSha`, `headRef`, `baseRef` and `author`.
+- `repository` and `pullRequest`: its `number`, `state`, `headSha`, `headRef`, `baseRef` and `author`.
 - `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the whole conversation in `comments`.
 - `previousSummaries`: the summaries of earlier reviews that are still visible.
 
 Stop if the pull request is not `OPEN`, and say so.
 
-The review skills in step 3 read the code in the working tree, so it has to be the code of the pull request. Compare `git rev-parse HEAD` with `headSha`. If they differ and the working tree is clean, run `gh pr checkout <number>`. If they differ and there are uncommitted changes, stop and tell the user rather than moving their work aside. If HEAD is ahead of `headSha` because of unpushed commits, also stop: comments can only be placed on code GitHub has.
+The review skills in step 3 read the code in the working tree, so it has to be the code of the pull request. Compare `git rev-parse HEAD` with `headSha`. If they differ and the working tree is clean, run `gh pr checkout <url>`. If they differ and there are uncommitted changes, stop and tell the user rather than moving their work aside. If HEAD is ahead of `headSha` because of unpushed commits, also stop: comments can only be placed on code GitHub has.
 
-Then read the pull request itself: `gh pr view <number> --json title,body,files` and `gh pr diff <number>`. The description tells you what the author meant to do, which is what the change is judged against.
+Then read the pull request itself: `gh pr view <url> --json title,body,files` and `gh pr diff <url>`. The description tells you what the author meant to do, which is what the change is judged against.
 
 ## 2. Follow up on the open threads
 

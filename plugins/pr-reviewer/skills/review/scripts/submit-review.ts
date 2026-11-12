@@ -136,7 +136,7 @@ const parseReview = (content: string): Review => {
       problems.push(`${name}.side must be RIGHT (the new code, the default) or LEFT (a removed line).`);
     }
     if (!isSeverity(severity)) {
-      problems.push(`${name}.severity must be must, should or nit.`);
+      problems.push(`${name}.severity must be critical, improve or nit.`);
     }
     if (!isText(body)) {
       problems.push(`${name}.body must describe the finding.`);
@@ -169,7 +169,7 @@ const parseReview = (content: string): Review => {
       problems.push(`${name}.status must be resolved or open.`);
     }
     if (severity !== undefined && !isSeverity(severity)) {
-      problems.push(`${name}.severity must be must, should or nit.`);
+      problems.push(`${name}.severity must be critical, improve or nit.`);
     }
     if (!isText(body)) {
       problems.push(`${name}.body must say what was checked and what was found.`);
@@ -246,7 +246,7 @@ const reconcile = (review: Review, state: ReviewState): Answered[] => {
     const severity = thread.severity ?? answer.severity;
     if (!severity && answer.status === 'open') {
       problems.push(
-        `threads: ${thread.id} stays open but its comment does not say how severe it is. Add \`severity\` (must, should or nit) to its answer.`,
+        `threads: ${thread.id} stays open but its comment does not say how severe it is. Add \`severity\` (critical, improve or nit) to its answer.`,
       );
       continue;
     }
@@ -260,7 +260,7 @@ const reconcile = (review: Review, state: ReviewState): Answered[] => {
 };
 
 const count = (severities: Severity[]): string => {
-  return (['must', 'should', 'nit'] as const)
+  return (['critical', 'improve', 'nit'] as const)
     .map((severity) => `${SEVERITIES[severity].emoji} ${SEVERITIES[severity].label}: ${severities.filter((item) => item === severity).length}`)
     .join(' · ');
 };
@@ -435,7 +435,7 @@ const main = (): number => {
     const blocking = [
       ...review.findings.map((finding) => finding.severity),
       ...answered.filter(({ answer }) => answer.status === 'open').map(({ severity }) => severity),
-    ].includes('must');
+    ].includes('critical');
     const verdict: Verdict = blocking ? 'REQUEST_CHANGES' : 'APPROVE';
     // GitHub rejects a verdict on your own pull request, which happens when the skill is run locally by the author.
     const isAuthor = state.viewer !== null && isSameAccount(state.viewer, state.pullRequest.author);

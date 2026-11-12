@@ -5,7 +5,7 @@
  */
 import { spawnSync } from 'node:child_process';
 
-export type Severity = 'must' | 'should' | 'nit';
+export type Severity = 'critical' | 'improve' | 'nit';
 
 export type Author = {
   login: string;
@@ -84,9 +84,9 @@ export type ReviewState = {
 };
 
 export const SEVERITIES: Record<Severity, { emoji: string; label: string }> = {
-  must: { emoji: '🔴', label: 'Must fix' },
-  should: { emoji: '🟡', label: 'Should fix' },
-  nit: { emoji: '🔵', label: 'Optional' },
+  critical: { emoji: '🔴', label: 'Critical' },
+  improve: { emoji: '🟡', label: 'Improve' },
+  nit: { emoji: '🔵', label: 'Nit' },
 };
 
 /** The start of the name of the temporary directory that holds a review file. */
@@ -94,9 +94,9 @@ export const REVIEW_DIRECTORY_PREFIX = 'pr-reviewer-';
 
 export const SUMMARY_MARKER = '<!-- pr-reviewer:summary -->';
 
-const FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->/;
+const FINDING_MARKER = /<!-- pr-reviewer:finding severity=\w+ -->/;
 /** The marker `formatFinding` writes: the one that ends the comment, not one the text of the finding may quote. */
-const FINAL_FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->\s*$/;
+const FINAL_FINDING_MARKER = /<!-- pr-reviewer:finding severity=(\w+) -->\s*$/;
 const REPOSITORY = /^(?:([\w.-]+)\/)?([\w.-]+)\/([\w.-]+)$/;
 const PULL_REQUEST_URL = /^https:\/\/([\w.-]+)\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/;
 const BOT_SUFFIX = /\[bot\]$/;
@@ -105,7 +105,7 @@ const REVIEW_BOT = 'claude';
 const NOT_ACCESSIBLE = /not accessible by integration/i;
 
 export const isSeverity = (value: unknown): value is Severity => {
-  return value === 'must' || value === 'should' || value === 'nit';
+  return value === 'critical' || value === 'improve' || value === 'nit';
 };
 
 /**
@@ -119,7 +119,8 @@ export const formatFinding = (severity: Severity, body: string): string => {
 
 /**
  * Reads the severity of a finding from its comment, falling back to the leading emoji for
- * comments whose marker was lost, for example when someone edited the comment.
+ * comments whose marker does not say: one that was edited, or one written when the
+ * severities had other names.
  */
 export const parseSeverity = (body: string): Severity | null => {
   const marked = FINAL_FINDING_MARKER.exec(body)?.[1];
@@ -127,7 +128,7 @@ export const parseSeverity = (body: string): Severity | null => {
     return marked;
   }
   const trimmed = body.trimStart();
-  for (const severity of ['must', 'should', 'nit'] as const) {
+  for (const severity of ['critical', 'improve', 'nit'] as const) {
     if (trimmed.startsWith(SEVERITIES[severity].emoji)) {
       return severity;
     }

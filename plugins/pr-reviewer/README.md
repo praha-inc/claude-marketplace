@@ -95,9 +95,9 @@ Every inline comment starts with its severity:
 
 | Prefix | Meaning |
 |--------|---------|
-| 🔴 **Must fix** | Merging this would cause harm, such as a bug, a vulnerability or data loss. |
-| 🟡 **Should fix** | Worth fixing, but merging without it is defensible. |
-| 🔵 **Optional** | The author may ignore it. |
+| 🔴 **Critical** | Merging this would cause harm, such as a bug, a vulnerability or data loss. |
+| 🟡 **Improve** | Worth fixing, but merging without it is defensible. |
+| 🔵 **Nit** | The author may ignore it. |
 
 ### Verdict
 

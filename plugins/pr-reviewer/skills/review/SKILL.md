@@ -80,11 +80,11 @@ Give each finding a severity. The author reads this first, and it decides the ve
 
 | Severity | Shown as | Meaning |
 |----------|----------|---------|
-| `must` | 🔴 Must fix | Merging this would cause harm: a bug in behaviour the change is meant to deliver, a security vulnerability, data loss or corruption, a breaking change nobody asked for. |
-| `should` | 🟡 Should fix | Worth fixing, but merging without it is defensible: a bug in an unlikely path, a missing test for risky logic, a design that will cost the next person. |
-| `nit` | 🔵 Optional | The author may ignore it: naming, style, a simpler way to write the same thing. |
+| `critical` | 🔴 Critical | Merging this would cause harm: a bug in behaviour the change is meant to deliver, a security vulnerability, data loss or corruption, a breaking change nobody asked for. |
+| `improve` | 🟡 Improve | Worth fixing, but merging without it is defensible: a bug in an unlikely path, a missing test for risky logic, a design that will cost the next person. |
+| `nit` | 🔵 Nit | The author may ignore it: naming, style, a simpler way to write the same thing. |
 
-When in doubt between two, pick the lower one. `must` blocks the merge, so it is kept for what you would stand behind blocking on, and a review where everything is 🔴 tells the author nothing about what matters.
+When in doubt between two, pick the lower one. `critical` blocks the merge, so it is kept for what you would stand behind blocking on, and a review where everything is 🔴 tells the author nothing about what matters.
 
 Write each comment for someone who sees only that comment: what is wrong, why it matters (the input or situation that triggers it), and what to do instead. Use a GitHub suggestion block when the fix is a few lines. Do not write the severity in the body, since the script prefixes it.
 
@@ -102,7 +102,7 @@ Write the review to the path that step 1 printed as `reviewFile`. It is in a tem
     {
       "path": "src/invoice.ts",
       "line": 42,
-      "severity": "must",
+      "severity": "critical",
       "body": "`total` is divided by `items.length` before the empty case is handled, so an invoice without items returns `NaN`.\n\n```suggestion\nif (items.length === 0) return 0;\n```"
     },
     {
@@ -130,7 +130,7 @@ Write the review to the path that step 1 printed as `reviewFile`. It is in a tem
 
 - `threads` must have one entry for every thread in `openThreads`, and only those. Add `"severity"` to an entry only when the thread's severity was `null` and it stays open.
 - `findings` and `threads` may be empty arrays.
-- There is no verdict in the file. The script requests changes when a new finding, or a thread that stays open, is `must`, and approves otherwise, so the verdict always follows from what was posted.
+- There is no verdict in the file. The script requests changes when a new finding, or a thread that stays open, is `critical`, and approves otherwise, so the verdict always follows from what was posted.
 
 Keep the `summary` to two or three sentences: what the change does in your own words, and the one or two things the author should look at first, or that nothing needs to change. The script appends the counts of findings by severity, so do not repeat them, and do not list the findings, since each is already on its line.
 

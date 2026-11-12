@@ -39,7 +39,8 @@ concurrency:
 jobs:
   review:
     name: Review
-    if: ${{ !github.event.pull_request.draft }}
+    # Drafts are skipped, and so are pull requests from forks, which do not receive the secrets.
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -78,6 +79,7 @@ jobs:
 - The allowed tools are what the skill needs: `Skill` and `Agent` to run the two review skills, the `gh pr` and `git` subcommands that only read, `node` to run the plugin's scripts, which are what posts the review, and `Write` and `Edit` for the review file, which is written to a temporary directory. If one of the review skills is denied a command it needs, add that subcommand rather than all of `gh` or `git`.
 - The workflow has Claude read text that the author of the pull request wrote, which may contain instructions aimed at it. That is why `gh` and `git` are limited to reading. `node` cannot be limited in the same way, because the path of the plugin's scripts is not known in advance, so it can still run code from the pull request. Keep the trigger `pull_request`, with which only people who can already change this workflow can open a pull request that receives the secrets, and never switch it to `pull_request_target`.
 - Keep the job's permissions as narrow as above.
+- Pull requests from forks are not reviewed. They do not receive the secrets, so the job skips them instead of failing.
 
 ## How it works
 

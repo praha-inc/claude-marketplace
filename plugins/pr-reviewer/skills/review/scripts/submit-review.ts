@@ -5,7 +5,7 @@
  * 2. leaves each new finding as a comment on its line, prefixed with its severity,
  * 3. submits the review as "Approve" or "Request changes" with a short summary,
  * 4. resolves the threads that were addressed, and
- * 5. hides the summaries of earlier reviews as outdated.
+ * 5. hides the summary of each earlier review whose threads are now all resolved, as outdated.
  *
  * When GitHub does not accept the verdict from this account, the review is posted as a
  * comment that states it, and an approval dismisses the account's earlier requests for changes.
@@ -392,6 +392,10 @@ const main = (): number => {
     const state = fetchReviewState(review.repository, review.pullRequest);
     const answered = reconcile(review, state);
 
+    // GitHub hides a review's comments along with its summary, so a summary stays up while one of its threads is open.
+    const resolving = new Set(answered.filter(({ answer }) => answer.status === 'resolved').map(({ thread }) => thread.id));
+    const finished = state.previousSummaries.filter((summary) => summary.openThreadIds.every((id) => resolving.has(id)));
+
     const blocking = [
       ...review.findings.map((finding) => finding.severity),
       ...answered.filter(({ answer }) => answer.status === 'open').map(({ severity }) => severity),
@@ -410,7 +414,7 @@ const main = (): number => {
           ...review.findings.map((finding) => `  - ${SEVERITIES[finding.severity].emoji} ${location(finding)}`),
           `Earlier threads answered: ${answered.length}`,
           ...answered.map(({ thread, answer }) => `  - ${answer.status === 'resolved' ? '✅ resolve' : '🔁 keep open'} ${thread.path} (${thread.id})`),
-          `Earlier summaries to hide as outdated: ${state.previousSummaries.length}`,
+          `Earlier summaries to hide as outdated: ${finished.length} of ${state.previousSummaries.length} (the others still have open threads)`,
           ...(state.pendingReview ? ['A pending review left behind by an interrupted run will be discarded first.'] : []),
           '',
         ].join('\n'),
@@ -466,6 +470,7 @@ const main = (): number => {
       throw error;
     }
 
+    const unresolved = new Set<string>();
     for (const { thread, answer } of answered) {
       if (answer.status !== 'resolved') {
         continue;
@@ -473,6 +478,7 @@ const main = (): number => {
       try {
         graphql(RESOLVE_THREAD, { threadId: thread.id });
       } catch (error) {
+        unresolved.add(thread.id);
         warnings.push(`Could not resolve the thread ${thread.url}: ${message(error)}`);
       }
     }
@@ -490,7 +496,8 @@ const main = (): number => {
     }
 
     // Hidden only now that the new summary is up, so the pull request is never left without one.
-    for (const summary of state.previousSummaries) {
+    const hidden = finished.filter((summary) => !summary.openThreadIds.some((id) => unresolved.has(id)));
+    for (const summary of hidden) {
       try {
         graphql(MINIMIZE, { subjectId: summary.id });
       } catch (error) {
@@ -504,7 +511,7 @@ const main = (): number => {
         `Verdict: ${VERDICTS[verdict]}${event === 'COMMENT' ? ' (posted as a comment)' : ''}`,
         `New findings: ${review.findings.length}`,
         `Earlier threads resolved: ${answered.filter(({ answer }) => answer.status === 'resolved').length} of ${answered.length}`,
-        `Earlier summaries hidden: ${state.previousSummaries.length}`,
+        `Earlier summaries hidden: ${hidden.length} of ${state.previousSummaries.length}`,
         ...warnings.map((warning) => `Warning: ${warning}`),
         '',
       ].join('\n'),

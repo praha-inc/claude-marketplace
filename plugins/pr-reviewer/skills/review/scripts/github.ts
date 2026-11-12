@@ -37,6 +37,8 @@ export type PreviousSummary = {
   url: string;
   state: string;
   submittedAt: string | null;
+  /** The threads this review started that are not resolved yet. */
+  openThreadIds: string[];
 };
 
 export type ReviewState = {
@@ -58,7 +60,10 @@ export type ReviewState = {
   /** Unresolved threads started by an earlier review, each of which the next review must answer. */
   openThreads: OpenThread[];
   resolvedThreadCount: number;
-  /** Summaries of earlier reviews that are still visible. */
+  /**
+   * Summaries of earlier reviews that are still visible. GitHub hides the comments of a review
+   * together with its summary, so a summary is only hidden once all its threads are resolved.
+   */
   previousSummaries: PreviousSummary[];
   /**
    * A review this account started on the pull request and has not submitted. GitHub allows
@@ -179,7 +184,7 @@ type ThreadNode = {
   path: string;
   line: number | null;
   originalLine: number | null;
-  finding: { nodes: (CommentNode & { diffHunk: string })[] };
+  finding: { nodes: (CommentNode & { diffHunk: string; pullRequestReview: { id: string } | null })[] };
   replies: { totalCount: number; nodes: CommentNode[] };
 };
 
@@ -225,7 +230,7 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
         nodes {
           id isResolved isOutdated path line originalLine
           finding: comments(first: 1) {
-            nodes { url body createdAt diffHunk author { login __typename } }
+            nodes { url body createdAt diffHunk author { login __typename } pullRequestReview { id } }
           }
           replies: comments(last: 50) {
             totalCount
@@ -333,7 +338,8 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
     return viewer !== null && normalize(author.login) === normalize(viewer) && hasMarker(body);
   };
 
-  const threads = fetchAll<ThreadNode>(THREADS_QUERY, variables, (node) => node['reviewThreads']).filter((thread) => {
+  const allThreads = fetchAll<ThreadNode>(THREADS_QUERY, variables, (node) => node['reviewThreads']);
+  const threads = allThreads.filter((thread) => {
     const finding = thread.finding.nodes[0];
     return finding !== undefined && isOurs(finding.author, finding.body);
   });
@@ -384,7 +390,15 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
     previousSummaries: reviews
       .filter((review) => !review.isMinimized && review.state !== 'PENDING' && review.body.includes(SUMMARY_MARKER))
       .filter((review) => isOurs(review.author, review.body))
-      .map((review) => ({ id: review.id, url: review.url, state: review.state, submittedAt: review.submittedAt })),
+      .map((review) => ({
+        id: review.id,
+        url: review.url,
+        state: review.state,
+        submittedAt: review.submittedAt,
+        openThreadIds: allThreads
+          .filter((thread) => !thread.isResolved && thread.finding.nodes[0]?.pullRequestReview?.id === review.id)
+          .map((thread) => thread.id),
+      })),
     pendingReview: pending ? { id: pending.id, isBot: toAuthor(pending.author).isBot } : null,
     changesRequested: reviews
       .filter((review) => review.state === 'CHANGES_REQUESTED' && isOurs(review.author, review.body))

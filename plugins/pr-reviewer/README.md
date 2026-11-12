@@ -84,7 +84,7 @@ jobs:
 2. **Follow up**: For every thread an earlier review left open, Claude checks the current code and replies in the thread with what it found. Threads that were addressed are resolved. This includes threads where the author gave a sound reason not to change the code, or declined an optional suggestion.
 3. **Review**: Claude runs `/code-review` and `/security-review` on the change.
 4. **Triage**: Claude drops duplicates and findings that do not hold up, keeps the ones the pull request introduced, and gives each a severity.
-5. **Post**: The replies, the new inline comments and the verdict go up as one review, so the author gets one notification. The summary of the previous review is then hidden as outdated.
+5. **Post**: The replies, the new inline comments and the verdict go up as one review, so the author gets one notification. The summary of an earlier review is then hidden as outdated, once every thread of that review is resolved. Until then it stays visible, because GitHub hides the comments of a review together with its summary.
 
 ### Severity
 

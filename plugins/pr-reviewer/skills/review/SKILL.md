@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review a GitHub pull request and post the result to it. Runs the code-review and security-review skills, leaves each finding as a comment on its line with a severity prefix, follows up on the threads an earlier review left open and resolves the ones that were fixed, submits "Approve" or "Request changes" with a short summary, and hides the previous summary as outdated. Use this whenever the user asks to review a pull request, to re-review one after new commits, or to check whether earlier review comments were addressed, and when running as an automated reviewer in CI, even if they do not name this skill.
+description: Review a GitHub pull request and post the result to it. Runs the code-review and security-review skills, leaves each finding as a comment on its line with a severity prefix, follows up on the threads an earlier review left open and resolves the ones that were fixed, submits "Approve" or "Request changes" with a short summary, and hides the summaries of earlier reviews as outdated once their threads are all resolved. Use this whenever the user asks to review a pull request, to re-review one after new commits, or to check whether earlier review comments were addressed, and when running as an automated reviewer in CI, even if they do not name this skill.
 argument-hint: "[pull request number or URL]"
 ---
 
@@ -30,7 +30,7 @@ It prints JSON with:
 
 - `repository` and `pullRequest`: its `number`, `state`, `headSha`, `headRef`, `baseRef` and `author`.
 - `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the conversation in `comments`, starting with the finding. When the code changed, `line` is `null`, and `originalLine` and `diffHunk` show where the finding was left and what the code looked like then.
-- `previousSummaries`: the summaries of earlier reviews that are still visible.
+- `previousSummaries`: the summaries of earlier reviews that are still visible, each with the ids of its threads that are still open.
 
 Stop if the pull request is not `OPEN`, and say so.
 
@@ -147,7 +147,7 @@ Then post it:
 node "${CLAUDE_SKILL_DIR}/scripts/submit-review.ts" <directory>/review.json
 ```
 
-Being asked to run this skill is the request to post, so do not ask for confirmation again. The script posts everything as one review, so the author gets one notification: the replies to earlier threads, the new comments, and the verdict with the summary. It then resolves the threads marked `resolved` and hides the summaries of earlier reviews as outdated.
+Being asked to run this skill is the request to post, so do not ask for confirmation again. The script posts everything as one review, so the author gets one notification: the replies to earlier threads, the new comments, and the verdict with the summary. It then resolves the threads marked `resolved`, and hides the summary of each earlier review as outdated once all of that review's threads are resolved. A summary with a thread that is still open stays visible, because GitHub hides a review's comments together with its summary.
 
 Do not run it a second time after it succeeds, as that would post the same comments again. If it fails, it removes what it had started, so after fixing the cause it is safe to run again.
 

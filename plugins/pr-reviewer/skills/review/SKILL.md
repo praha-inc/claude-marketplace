@@ -30,6 +30,7 @@ It prints JSON with:
 
 - `repository` and `pullRequest`: its `number`, `state`, `headSha`, `headRef`, `baseRef` and `author`.
 - `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the conversation in `comments`, starting with the finding. When the code changed, `line` is `null`, and `originalLine` and `diffHunk` show where the finding was left and what the code looked like then.
+- `changedFiles`: the paths of the files the pull request changes, which are the only files a finding can be placed on.
 - `reviewFile`: the path to write the review to in step 5.
 - `previousSummaries`: the summaries of earlier reviews that are still visible, each with the ids of its threads that are still open.
 
@@ -73,6 +74,7 @@ Gather the findings from both skills and go through them:
 - **Drop what does not hold up.** Open the code a finding points to and confirm it. A wrong comment costs the author more time than a missed nit, and it teaches them to skim the next review.
 - **Keep to the change.** A finding belongs in this review when the pull request introduced it or made it worse. Problems that were already there are out of scope, unless the change now depends on them.
 - **Place it.** Give each finding the path and the line of the changed code it is about, on the new side of the diff. Use `startLine` when it covers a range. Use `"side": "LEFT"` only for a line the pull request removed.
+- **When the code is outside the change, place it on the change.** GitHub only accepts a review comment on a file in `changedFiles`, and only a review comment becomes a thread that the author can reply to and the next review can resolve. So when the code a finding is about is not part of the change (a caller the change broke, a file that should have been updated along with it), place it on the changed line it follows from, such as the new signature that the untouched caller no longer matches. If no single line is the cause, pick the changed file most closely related to it. Either way, name the code the finding is really about in the body, with its path and line.
 
 Give each finding a severity. The author reads this first, and it decides the verdict:
 
@@ -152,4 +154,4 @@ Being asked to run this skill is the request to post, so do not ask for confirma
 
 Once the review is posted, the script deletes the review file, so the same comments cannot be posted twice by running it again. If it fails, it removes what it had started, so after fixing the cause it is safe to run again.
 
-Finish by telling the user the URL of the review, the verdict, how many findings there were at each severity, and how many earlier threads were resolved and how many stay open. Pass on any `Warning:` lines from the script: a finding that could not be attached to its line was posted on the file or in the summary instead, and a verdict GitHub did not accept (on your own pull request, or with a token that may not approve) was posted as a comment that states the verdict.
+Finish by telling the user the URL of the review, the verdict, how many findings there were at each severity, and how many earlier threads were resolved and how many stay open. Pass on any `Warning:` lines from the script: a finding that could not be attached to its line was posted on the file instead, and a verdict GitHub did not accept (on your own pull request, or with a token that may not approve) was posted as a comment that states the verdict.

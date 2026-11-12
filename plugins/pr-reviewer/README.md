@@ -109,7 +109,7 @@ A thread or summary counts as an earlier review's when `claude[bot]` wrote it, o
 - The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to pull requests, and Node.js 22.18 or later available as `node`, because its scripts are TypeScript files run with Node.js type stripping.
 - The working tree must be the code of the pull request. The skill runs `gh pr checkout` when the tree is clean, and stops when there are uncommitted changes or unpushed commits.
 - GitHub does not accept an approval or a request for changes on your own pull request, and some CI tokens may comment but not approve. In both cases the review is posted as a comment whose summary states the verdict.
-- A finding on a line that is not part of the diff is posted on the file instead, or in the summary when the file is not in the diff either.
+- Every finding is a thread on a file the pull request changes, so that it can be replied to and resolved. A finding about code outside the change is placed on the changed line it follows from, or on the changed file most closely related to it, and names the code it is about. A finding on a line that is not part of the diff is posted on the file instead.
 - The review file is written to a temporary directory outside the repository, which the plugin's scripts create and delete.
 
 ## Disabling

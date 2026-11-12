@@ -2,7 +2,8 @@
  * Posts a review to a pull request from a JSON file, as one review:
  *
  * 1. answers every thread an earlier review left open, saying whether it was addressed,
- * 2. leaves each new finding as a comment on its line, prefixed with its severity,
+ * 2. leaves each new finding as a comment on its line, prefixed with its severity (or on its
+ *    file, when the line is not in the diff),
  * 3. submits the review as "Approve" or "Request changes" with a short summary,
  * 4. resolves the threads that were addressed, and
  * 5. hides the summary of each earlier review whose threads are now all resolved, as outdated.
@@ -188,7 +189,7 @@ const parseReview = (content: string): Review => {
  * Checks the review against the pull request as it is now, and returns each answered
  * thread with the severity of its original finding.
  */
-const reconcile = (review: Review, state: ReviewState): { thread: OpenThread; answer: ThreadAnswer; severity: Severity }[] => {
+const reconcile = (review: Review, state: ReviewState): Answered[] => {
   const problems: string[] = [];
   if (state.pullRequest.state !== 'OPEN') {
     problems.push(`The pull request is ${state.pullRequest.state.toLowerCase()}, so there is nothing to review.`);
@@ -207,6 +208,17 @@ const reconcile = (review: Review, state: ReviewState): { thread: OpenThread; an
     );
   }
 
+  // GitHub has nowhere to put a comment on a file the pull request does not change, and a finding
+  // posted anywhere else would not be a thread that the next review can follow up on and resolve.
+  const changed = new Set(state.changedFiles);
+  for (const [index, finding] of review.findings.entries()) {
+    if (!changed.has(finding.path)) {
+      problems.push(
+        `findings[${index}].path: ${finding.path} is not a file this pull request changes. Place the finding on the changed line it follows from, or on the changed file closest to it, and name the code it is about in the body.`,
+      );
+    }
+  }
+
   const answers = new Map(review.threads.map((answer) => [answer.id, answer]));
   const open = new Map(state.openThreads.map((thread) => [thread.id, thread]));
   for (const id of answers.keys()) {
@@ -215,7 +227,7 @@ const reconcile = (review: Review, state: ReviewState): { thread: OpenThread; an
     }
   }
 
-  const answered: { thread: OpenThread; answer: ThreadAnswer; severity: Severity }[] = [];
+  const answered: Answered[] = [];
   for (const thread of state.openThreads) {
     const answer = answers.get(thread.id);
     if (!answer) {
@@ -256,12 +268,9 @@ const withoutSuggestions = (body: string): string => {
   return body.trim().replaceAll(SUGGESTION_FENCE, '$1');
 };
 
-const composeSummary = (
-  review: Review,
-  answered: { answer: ThreadAnswer }[],
-  unplaced: Finding[],
-  commentOnly: Verdict | undefined,
-): string => {
+type Answered = { thread: OpenThread; answer: ThreadAnswer; severity: Severity };
+
+const composeSummary = (review: Review, answered: Answered[], commentOnly: Verdict | undefined): string => {
   const resolved = answered.filter(({ answer }) => answer.status === 'resolved').length;
   return [
     ...(commentOnly ? [`**Verdict: ${VERDICTS[commentOnly]}** (posted as a comment, because GitHub did not accept this account's verdict on this pull request)`] : []),
@@ -270,19 +279,6 @@ const composeSummary = (
       `New findings — ${count(review.findings.map((finding) => finding.severity))}`,
       ...(0 < answered.length ? [`Earlier findings — ✅ Resolved: ${resolved} · 🔁 Still open: ${answered.length - resolved}`] : []),
     ].join('\n'),
-    ...(0 < unplaced.length
-      ? [
-          [
-            '**Findings that could not be attached to the diff**',
-            ...unplaced.map((finding) => {
-              const { emoji, label } = SEVERITIES[finding.severity];
-              // The body is indented so that its paragraphs and code blocks stay inside the list item.
-              const body = withoutSuggestions(finding.body).replaceAll(/^(?=.)/gm, '  ');
-              return `- ${emoji} **${label}** \`${location(finding)}\`\n\n${body}`;
-            }),
-          ].join('\n\n'),
-        ]
-      : []),
     SUMMARY_MARKER,
   ].join('\n\n');
 };
@@ -357,11 +353,11 @@ const addThread = (input: Record<string, unknown>): boolean => {
 /**
  * Attaches a finding to the review at the most precise place GitHub accepts: its range of
  * lines, then its last line alone (a range that crosses into unchanged code is refused as
- * a whole), then the file, and nowhere when the file is not in the diff. A finding outside
- * the diff is real but GitHub has no line to hang it on, so it is reported in the summary
- * instead of failing the review.
+ * a whole), then the file. Every finding is on a file the pull request changes, which
+ * `reconcile` checked, and GitHub accepts a comment on any such file, so each one ends up
+ * in a thread.
  */
-const placeFinding = (reviewId: string, finding: Finding): 'line' | 'file' | 'unplaced' => {
+const placeFinding = (reviewId: string, finding: Finding): 'line' | 'file' => {
   const onLine = { pullRequestReviewId: reviewId, path: finding.path, line: finding.line, side: finding.side };
   const body = formatFinding(finding.severity, finding.body);
   if (finding.startLine && addThread({ ...onLine, startLine: finding.startLine, startSide: finding.side, body })) {
@@ -376,7 +372,10 @@ const placeFinding = (reviewId: string, finding: Finding): 'line' | 'file' | 'un
     subjectType: 'FILE',
     body: formatFinding(finding.severity, `\`${location(finding)}\`\n\n${withoutSuggestions(finding.body)}`),
   });
-  return onFile ? 'file' : 'unplaced';
+  if (!onFile) {
+    throw new Error(`GitHub did not accept a comment on ${finding.path}, although the pull request changes that file.`);
+  }
+  return 'file';
 };
 
 const submit = (reviewId: string, event: Verdict | 'COMMENT', body: string): string => {
@@ -458,7 +457,6 @@ const main = (): number => {
     }).addPullRequestReview.pullRequestReview.id;
 
     const warnings: string[] = [];
-    const unplaced: Finding[] = [];
     let url = '';
     let event: Verdict | 'COMMENT' = isAuthor ? 'COMMENT' : verdict;
     try {
@@ -466,16 +464,12 @@ const main = (): number => {
         graphql(ADD_REPLY, { reviewId, threadId: thread.id, body: `${THREAD_PREFIXES[answer.status]}\n\n${answer.body.trim()}` });
       }
       for (const finding of review.findings) {
-        const placement = placeFinding(reviewId, finding);
-        if (placement === 'unplaced') {
-          unplaced.push(finding);
-        }
-        if (placement !== 'line') {
-          warnings.push(`${location(finding)} is not part of the diff, so the finding was posted ${placement === 'file' ? 'on the file' : 'in the summary'}.`);
+        if (placeFinding(reviewId, finding) === 'file') {
+          warnings.push(`${location(finding)} is not part of the diff, so the finding was posted on the file.`);
         }
       }
       try {
-        url = submit(reviewId, event, composeSummary(review, answered, unplaced, isAuthor ? verdict : undefined));
+        url = submit(reviewId, event, composeSummary(review, answered, isAuthor ? verdict : undefined));
       } catch (error) {
         // Only a refusal of the verdict itself falls back. Any other failure, such as a rate limit, fails the run,
         // because posting it as a comment would quietly turn a blocking review into one that does not block.
@@ -485,7 +479,7 @@ const main = (): number => {
         // Some tokens may comment but not approve or request changes. The comments still matter, so fall back.
         warnings.push(`GitHub did not accept "${VERDICTS[verdict]}" (${message(error)}), so the review was posted as a comment.`);
         event = 'COMMENT';
-        url = submit(reviewId, event, composeSummary(review, answered, unplaced, verdict));
+        url = submit(reviewId, event, composeSummary(review, answered, verdict));
       }
     } catch (error) {
       // Leave no half-written pending review behind, as it would block the next run.

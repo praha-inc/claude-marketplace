@@ -57,6 +57,11 @@ export type ReviewState = {
   };
   /** The login the review will be posted as, or null when the token cannot tell. */
   viewer: string | null;
+  /**
+   * The paths of the files the pull request changes. GitHub only accepts a review comment on
+   * one of these, so they are the only files a finding can be placed on.
+   */
+  changedFiles: string[];
   /** Unresolved threads started by an earlier review, each of which the next review must answer. */
   openThreads: OpenThread[];
   resolvedThreadCount: number;
@@ -245,6 +250,18 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
   }
 }`;
 
+const FILES_QUERY = `
+query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      files(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { path }
+      }
+    }
+  }
+}`;
+
 const REVIEWS_QUERY = `
 query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
   repository(owner: $owner, name: $name) {
@@ -366,6 +383,7 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
       baseRef: pullRequest.baseRefName,
     },
     viewer,
+    changedFiles: fetchAll<{ path: string }>(FILES_QUERY, variables, (node) => node['files']).map((file) => file.path),
     openThreads: threads
       .filter((thread) => !thread.isResolved)
       .map((thread) => {

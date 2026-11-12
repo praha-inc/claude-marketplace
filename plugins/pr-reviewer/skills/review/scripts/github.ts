@@ -136,10 +136,17 @@ export const hasMarker = (body: string): boolean => {
   return FINDING_MARKER.test(body) || body.includes(SUMMARY_MARKER);
 };
 
+/**
+ * Says why a `gh` call failed. When gh could not be started there is no output at all, only the error.
+ */
+const failure = (result: { stderr: string | null; error?: Error }): string => {
+  return `${result.stderr ?? ''}${result.error?.message ?? ''}`.trim();
+};
+
 export const gh = (args: string[], input?: string): string => {
   const result = spawnSync('gh', args, { encoding: 'utf8', input: input ?? '', maxBuffer: 64 * 1024 * 1024 });
   if (result.status !== 0) {
-    throw new Error(`gh ${args.join(' ')} failed:\n${`${result.stderr}${result.error?.message ?? ''}`.trim()}`);
+    throw new Error(`gh ${args.join(' ')} failed:\n${failure(result)}`);
   }
   return result.stdout.trim();
 };
@@ -162,14 +169,15 @@ export const graphql = <T>(query: string, variables: Record<string, unknown>): T
 
   let response: GraphqlResponse<T> = {};
   try {
-    response = JSON.parse(result.stdout) as GraphqlResponse<T>;
+    // Without output, as when gh could not be started, this parses to null and not to a response.
+    response = (JSON.parse(result.stdout) as GraphqlResponse<T> | null) ?? {};
   } catch {
     // gh printed something other than a response, which is reported from stderr below.
   }
 
   const messages = (response.errors ?? []).map((error) => error.message ?? 'Unknown error');
   if (result.status !== 0 || 0 < messages.length || response.data === undefined || response.data === null) {
-    const reason = 0 < messages.length ? messages.join('; ') : `${result.stderr}${result.error?.message ?? ''}`.trim();
+    const reason = 0 < messages.length ? messages.join('; ') : failure(result);
     throw new Error(`GitHub GraphQL request failed: ${reason || 'no data returned'}`);
   }
   return response.data;

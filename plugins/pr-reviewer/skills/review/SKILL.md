@@ -59,7 +59,7 @@ If a thread's `severity` is `null` (the comment was not written by this skill) a
 
 Run both of these skills on the pull request with the Skill tool, one after the other, in this conversation rather than in a subagent, because they start their own subagents:
 
-1. `code-review`, with the pull request number as its target. Do not pass `--comment` or `--fix`: this skill posts the findings, and a review does not change the code.
+1. `code-review`, with the URL of the pull request as its target, for the same reason as in step 1: a number would be looked up in the repository of the current directory. Do not pass `--comment` or `--fix`: this skill posts the findings, and a review does not change the code.
 2. `security-review`.
 
 Both report their findings back to you. Nothing is posted yet. A skill may run in the background and report later, so wait until both have reported before going on to step 4: a review posted from one of them alone would approve whatever the other was about to find.

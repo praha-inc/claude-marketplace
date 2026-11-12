@@ -91,6 +91,13 @@ const parseReview = (content: string): Review => {
     problems.push('`summary` must be a short summary of the review.');
   }
 
+  // The verdict is derived from these lists, so a missing or misspelled key must not pass as "nothing found".
+  for (const key of ['findings', 'threads']) {
+    if (!Array.isArray(data[key])) {
+      problems.push(`\`${key}\` must be an array. Use an empty array when there are none.`);
+    }
+  }
+
   const findings: Finding[] = [];
   const rawFindings: unknown[] = Array.isArray(data['findings']) ? data['findings'] : [];
   for (const [index, finding] of rawFindings.entries()) {

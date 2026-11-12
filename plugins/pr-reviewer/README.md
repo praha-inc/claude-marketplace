@@ -81,6 +81,34 @@ jobs:
 - Keep the job's permissions as narrow as above.
 - Pull requests from forks are not reviewed. They do not receive the secrets, so the job skips them instead of failing.
 
+#### Only when asked
+
+To review a pull request when someone asks for it instead of on every push, start the workflow from a label. Create a label named `review` in the repository, and change these parts of the workflow above:
+
+```yaml
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  review:
+    # Drafts are reviewed too, because the review was asked for.
+    if: ${{ github.event.label.name == 'review' && github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      # Removed first, so that adding the label again asks for another review.
+      - name: Remove the label
+        run: gh api --method DELETE "repos/${GITHUB_REPOSITORY}/issues/${NUMBER}/labels/review"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+
+      # Checkout, Setup Node.js and Review follow, as above.
+```
+
+- Adding the `review` label to a pull request starts a review. Only people with triage access or more can add a label, so the author of a pull request from outside cannot ask for one.
+- The trigger is still `pull_request`, so everything above about secrets and forks holds. A comment such as `/review` would be handled by `issue_comment`, which runs with the secrets for pull requests from forks as well, and is not a safe replacement.
+- To do both, add `labeled` to the types of the workflow above, and let the job run when `github.event.action != 'labeled' || github.event.label.name == 'review'`.
+
 ## How it works
 
 1. **Read the state**: Claude finds the pull request, checks out its code, and reads what earlier reviews left on it.

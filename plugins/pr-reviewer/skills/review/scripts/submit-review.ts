@@ -58,6 +58,8 @@ const THREAD_PREFIXES: Record<ThreadAnswer['status'], string> = {
   open: '🔁 **Still open**',
 };
 
+const SUGGESTION_FENCE = /^(\s*(?:`{3,}|~{3,}))suggestion\b.*$/gm;
+
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
@@ -236,6 +238,14 @@ const location = (finding: Finding): string => {
   return `${finding.path}:${finding.startLine ? `${finding.startLine}-` : ''}${finding.line}`;
 };
 
+/**
+ * Rewrites a finding for a place other than its line: a suggestion block there could not
+ * be applied to anything, so it is shown as the plain code it contains.
+ */
+const withoutSuggestions = (body: string): string => {
+  return body.trim().replaceAll(SUGGESTION_FENCE, '$1');
+};
+
 const composeSummary = (
   review: Review,
   answered: { answer: ThreadAnswer }[],
@@ -256,9 +266,11 @@ const composeSummary = (
             '**Findings that could not be attached to the diff**',
             ...unplaced.map((finding) => {
               const { emoji, label } = SEVERITIES[finding.severity];
-              return `- ${emoji} **${label}** \`${location(finding)}\`: ${finding.body.trim()}`;
+              // The body is indented so that its paragraphs and code blocks stay inside the list item.
+              const body = withoutSuggestions(finding.body).replaceAll(/^(?=.)/gm, '  ');
+              return `- ${emoji} **${label}** \`${location(finding)}\`\n\n${body}`;
             }),
-          ].join('\n'),
+          ].join('\n\n'),
         ]
       : []),
     SUMMARY_MARKER,
@@ -352,7 +364,7 @@ const placeFinding = (reviewId: string, finding: Finding): 'line' | 'file' | 'un
     pullRequestReviewId: reviewId,
     path: finding.path,
     subjectType: 'FILE',
-    body: formatFinding(finding.severity, `\`${location(finding)}\`\n\n${finding.body.trim()}`),
+    body: formatFinding(finding.severity, `\`${location(finding)}\`\n\n${withoutSuggestions(finding.body)}`),
   });
   return onFile ? 'file' : 'unplaced';
 };

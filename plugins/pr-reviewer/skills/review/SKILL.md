@@ -53,7 +53,7 @@ Check the code, not the conversation. "Fixed" in a reply is a claim, and `isOutd
 
 Write a short answer for each thread, saying what you checked and what you found: for a resolved thread, what fixed it (name the commit or the line); for an open one, what is still missing, concretely enough to act on. Do not add the "Resolved" or "Still open" label yourself, since the script prefixes it.
 
-If a thread's `severity` is `null` (the comment was not written by this skill) and it stays open, decide its severity from its content using the scale in step 4.
+If a thread's `severity` is `null` (its comment was edited and no longer says) and it stays open, decide its severity from its content using the scale in step 4.
 
 ## 3. Review the change
 

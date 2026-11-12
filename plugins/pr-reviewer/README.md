@@ -74,7 +74,7 @@ jobs:
             --allowedTools "Skill,Agent,Read,Write,Edit,Glob,Grep,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(git rev-parse:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(node:*)"
 ```
 
-- `id-token: write` lets the action obtain the Claude GitHub App's token, which is what makes the review appear as `claude[bot]`. The next review recognises its earlier comments by that author.
+- `id-token: write` lets the action obtain the Claude GitHub App's token, which is what makes the review appear as `claude[bot]`. The next review recognises its earlier comments by that author and the hidden marker they carry.
 - `claude_code_oauth_token` can be used in place of `anthropic_api_key`.
 - The allowed tools are what the skill needs: `Skill` and `Agent` to run the two review skills, the `gh pr` and `git` subcommands that only read, `node` to run the plugin's scripts, which are what posts the review, and `Write` and `Edit` for the review file, which is written to a temporary directory. If one of the review skills is denied a command it needs, add that subcommand rather than all of `gh` or `git`.
 - The workflow has Claude read text that the author of the pull request wrote, which may contain instructions aimed at it. That is why `gh` and `git` are limited to reading. `node` cannot be limited in the same way, because the path of the plugin's scripts is not known in advance, so it can still run code from the pull request. Keep the trigger `pull_request`, with which only people who can already change this workflow can open a pull request that receives the secrets, and never switch it to `pull_request_target`.
@@ -105,7 +105,7 @@ The review **requests changes** when a new finding is 🔴, or when a 🔴 findi
 
 ### Earlier reviews
 
-A thread or summary counts as an earlier review's when `claude[bot]` wrote it, or when the account running the skill wrote it through this plugin (those comments carry a hidden marker). Threads you wrote by hand are never answered or resolved for you.
+A thread or summary counts as an earlier review's when this plugin wrote it, as `claude[bot]` or as the account running the skill. The plugin's comments carry a hidden marker, which is how they are told apart. Threads you wrote by hand, and comments that `claude[bot]` left through another integration, are never answered or resolved for you.
 
 ## Notes
 

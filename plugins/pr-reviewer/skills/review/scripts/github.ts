@@ -370,10 +370,11 @@ const fetchAll = <N>(
  * Reads what earlier reviews left on a pull request: the threads that are still open and
  * the summaries that are still visible.
  *
- * A comment counts as an earlier review's when the review bot (claude[bot]) wrote it, or
- * when the current user wrote it and it carries this plugin's marker. The marker is required
- * for the current user so that a person running the skill locally never has their own
- * hand-written review threads answered and resolved for them.
+ * A comment counts as an earlier review's when it carries this plugin's marker and was
+ * written by the review bot (claude[bot]) or by the current user. The marker is required
+ * because both write other comments too: the bot is shared with other Claude integrations,
+ * and a person running the skill locally must never have their own hand-written review
+ * threads answered and resolved for them.
  */
 export const fetchReviewState = (repository: string, number: number): ReviewState => {
   const { owner, name } = splitRepository(repository);
@@ -387,11 +388,14 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
 
   const viewer = fetchViewer();
   const isOurs = (node: AuthorNode, body: string): boolean => {
+    if (!hasMarker(body)) {
+      return false;
+    }
     const author = toAuthor(node);
     if (author.isBot && normalize(author.login) === REVIEW_BOT) {
       return true;
     }
-    return viewer !== null && normalize(author.login) === normalize(viewer) && hasMarker(body);
+    return viewer !== null && normalize(author.login) === normalize(viewer);
   };
 
   const allThreads = fetchAll<ThreadNode>(THREADS_QUERY, variables, (node) => node['reviewThreads']);

@@ -74,6 +74,8 @@ const FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->/
 const REPOSITORY = /^[\w.-]+\/[\w.-]+$/;
 const BOT_SUFFIX = /\[bot\]$/;
 const REVIEW_BOT = 'claude';
+/** What GitHub answers when a token of an app or of GitHub Actions asks for something it may not see. */
+const NOT_ACCESSIBLE = /not accessible by integration/i;
 
 export const isSeverity = (value: unknown): value is Severity => {
   return value === 'must' || value === 'should' || value === 'nit';
@@ -246,14 +248,20 @@ const toAuthor = (node: AuthorNode): Author => {
 };
 
 /**
- * Returns the login the token acts as. Some tokens used in CI are not allowed to ask, in
- * which case earlier reviews are recognised by the review bot's login alone.
+ * Returns the login the token acts as, or null for a token that GitHub does not let ask,
+ * in which case earlier reviews are recognised by the review bot's login alone.
+ *
+ * Any other failure is thrown. Carrying on without the login would make a person's own
+ * earlier review invisible, and the run would post the same findings a second time.
  */
 const fetchViewer = (): string | null => {
   try {
     return graphql<{ viewer: { login: string } }>('query { viewer { login } }', {}).viewer.login;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof Error && NOT_ACCESSIBLE.test(error.message)) {
+      return null;
+    }
+    throw error;
   }
 };
 

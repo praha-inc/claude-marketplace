@@ -29,6 +29,7 @@ claude plugin install <plugin-name>@praha-claude-marketplace
 |----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [commit-hook](plugins/commit-hook)     | Runs the commands configured in `COMMIT_HOOK_COMMANDS` before Claude commits, and blocks the commit if any of them fail.                                                                |
 | [issue-planner](plugins/issue-planner) | Interviews you about what you want to achieve, investigates the codebase and related repositories, and creates a GitHub issue with sub-issues that each map to one pull request.        |
+| [pr-reviewer](plugins/pr-reviewer)     | Reviews a pull request with `/code-review` and `/security-review`, comments on the affected lines with a severity prefix, follows up on earlier threads, and approves or requests changes. |
 
 ## 🤝 Contributing
 

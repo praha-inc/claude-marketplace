@@ -1,0 +1,8 @@
+{
+  "name": "pr-reviewer",
+  "description": "Reviews a pull request with the code-review and security-review skills, comments on the affected lines with a severity prefix, follows up on earlier review threads, and submits an approval or a request for changes with a short summary.",
+  "author": {
+    "name": "PrAha, Inc.",
+    "url": "https://praha-inc.com"
+  }
+}

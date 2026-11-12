@@ -62,6 +62,12 @@ const THREAD_PREFIXES: Record<ThreadAnswer['status'], string> = {
   open: '🔁 **Still open**',
 };
 
+/**
+ * What GitHub answers when the account may not give a verdict on the pull request: its own
+ * pull request, GitHub Actions without the setting that lets it approve, or an app without the permission.
+ */
+const VERDICT_REFUSED = /can ?not (?:approve|request changes)|not permitted to (?:approve|request changes)|not accessible by integration/i;
+
 const SUGGESTION_FENCE = /^(\s*(?:`{3,}|~{3,}))suggestion\b.*$/gm;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -471,7 +477,9 @@ const main = (): number => {
       try {
         url = submit(reviewId, event, composeSummary(review, answered, unplaced, isAuthor ? verdict : undefined));
       } catch (error) {
-        if (event === 'COMMENT') {
+        // Only a refusal of the verdict itself falls back. Any other failure, such as a rate limit, fails the run,
+        // because posting it as a comment would quietly turn a blocking review into one that does not block.
+        if (event === 'COMMENT' || !VERDICT_REFUSED.test(message(error))) {
           throw error;
         }
         // Some tokens may comment but not approve or request changes. The comments still matter, so fall back.

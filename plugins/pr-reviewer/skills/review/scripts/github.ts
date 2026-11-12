@@ -97,7 +97,6 @@ const FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->/
 /** The marker `formatFinding` writes: the one that ends the comment, not one the text of the finding may quote. */
 const FINAL_FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->\s*$/;
 const REPOSITORY = /^(?:([\w.-]+)\/)?([\w.-]+)\/([\w.-]+)$/;
-const DEFAULT_HOST = 'github.com';
 const PULL_REQUEST_URL = /^https:\/\/([\w.-]+)\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/;
 const BOT_SUFFIX = /\[bot\]$/;
 const REVIEW_BOT = 'claude';
@@ -187,16 +186,17 @@ export const graphql = <T>(query: string, variables: Record<string, unknown>): T
 };
 
 /**
- * Splits a repository written as `owner/repo`, or as `host/owner/repo` for one on GitHub
- * Enterprise Server. A host is passed on to `gh` for every later call of this process,
- * which would otherwise ask github.com about a repository that lives elsewhere.
+ * Splits a repository written as `owner/repo` or as `host/owner/repo`. A host is passed on
+ * to `gh` for every later call of this process, which would otherwise ask the host it is
+ * configured for (github.com, or the `GH_HOST` of the environment) about a repository that
+ * lives elsewhere. Without a host, that configuration is what decides.
  */
 export const splitRepository = (repository: string): { owner: string; name: string } => {
   const [, host, owner, name] = REPOSITORY.exec(repository) ?? [];
   if (!owner || !name) {
     throw new Error(`Expected a repository as owner/repo or host/owner/repo, but got: ${repository || '(empty)'}`);
   }
-  if (host && host !== DEFAULT_HOST) {
+  if (host) {
     process.env['GH_HOST'] = host;
   }
   return { owner, name };
@@ -204,14 +204,15 @@ export const splitRepository = (repository: string): { owner: string; name: stri
 
 /**
  * Reads the repository and the number from the URL of a pull request on any host, with
- * the repository in the form `splitRepository` takes.
+ * the repository in the form `splitRepository` takes. The host is kept even for github.com,
+ * so that a URL always decides which host is asked.
  */
 export const parsePullRequestUrl = (url: string): { repository: string; number: number } | undefined => {
   const [, host, repository, number] = PULL_REQUEST_URL.exec(url) ?? [];
   if (!host || !repository || !number) {
     return undefined;
   }
-  return { repository: host === DEFAULT_HOST ? repository : `${host}/${repository}`, number: Number(number) };
+  return { repository: `${host}/${repository}`, number: Number(number) };
 };
 
 type AuthorNode = { login: string; __typename: string } | null;

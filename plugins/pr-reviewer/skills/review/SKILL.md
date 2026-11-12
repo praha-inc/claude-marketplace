@@ -94,7 +94,7 @@ Write the review to the path that step 1 printed as `reviewFile`. It is in a tem
 
 ```json
 {
-  "repository": "owner/repo",
+  "repository": "the repository from step 1, exactly as printed",
   "pullRequest": 123,
   "headSha": "the headSha from step 1",
   "summary": "Two or three sentences.",

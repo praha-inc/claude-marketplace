@@ -91,7 +91,9 @@ export const REVIEW_DIRECTORY_PREFIX = 'pr-reviewer-';
 export const SUMMARY_MARKER = '<!-- pr-reviewer:summary -->';
 
 const FINDING_MARKER = /<!-- pr-reviewer:finding severity=(must|should|nit) -->/;
-const REPOSITORY = /^[\w.-]+\/[\w.-]+$/;
+const REPOSITORY = /^(?:([\w.-]+)\/)?([\w.-]+)\/([\w.-]+)$/;
+const DEFAULT_HOST = 'github.com';
+const PULL_REQUEST_URL = /^https:\/\/([\w.-]+)\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/;
 const BOT_SUFFIX = /\[bot\]$/;
 const REVIEW_BOT = 'claude';
 /** What GitHub answers when a token of an app or of GitHub Actions asks for something it may not see. */
@@ -171,12 +173,32 @@ export const graphql = <T>(query: string, variables: Record<string, unknown>): T
   return response.data;
 };
 
+/**
+ * Splits a repository written as `owner/repo`, or as `host/owner/repo` for one on GitHub
+ * Enterprise Server. A host is passed on to `gh` for every later call of this process,
+ * which would otherwise ask github.com about a repository that lives elsewhere.
+ */
 export const splitRepository = (repository: string): { owner: string; name: string } => {
-  const [owner, name] = repository.split('/');
-  if (!REPOSITORY.test(repository) || !owner || !name) {
-    throw new Error(`Expected a repository as owner/repo, but got: ${repository || '(empty)'}`);
+  const [, host, owner, name] = REPOSITORY.exec(repository) ?? [];
+  if (!owner || !name) {
+    throw new Error(`Expected a repository as owner/repo or host/owner/repo, but got: ${repository || '(empty)'}`);
+  }
+  if (host && host !== DEFAULT_HOST) {
+    process.env['GH_HOST'] = host;
   }
   return { owner, name };
+};
+
+/**
+ * Reads the repository and the number from the URL of a pull request on any host, with
+ * the repository in the form `splitRepository` takes.
+ */
+export const parsePullRequestUrl = (url: string): { repository: string; number: number } | undefined => {
+  const [, host, repository, number] = PULL_REQUEST_URL.exec(url) ?? [];
+  if (!host || !repository || !number) {
+    return undefined;
+  }
+  return { repository: host === DEFAULT_HOST ? repository : `${host}/${repository}`, number: Number(number) };
 };
 
 type AuthorNode = { login: string; __typename: string } | null;

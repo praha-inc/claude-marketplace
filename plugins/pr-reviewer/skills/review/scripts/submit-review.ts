@@ -95,7 +95,7 @@ const parseReview = (content: string): Review => {
 
   const { repository, pullRequest, headSha, summary } = data;
   if (!isText(repository)) {
-    problems.push('`repository` must be owner/repo.');
+    problems.push('`repository` must be the repository as reported by fetch-review-state.ts.');
   }
   if (!isLine(pullRequest)) {
     problems.push('`pullRequest` must be the number of the pull request.');

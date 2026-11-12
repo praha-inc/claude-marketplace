@@ -303,32 +303,31 @@ mutation($subjectId: ID!) {
   }
 }`;
 
+/**
+ * Adds a thread to the pending review and returns whether GitHub placed it. GitHub answers
+ * a place that is not part of the diff with no thread and no error, so `false` means exactly
+ * that, and a real failure (rate limit, network, permissions) throws and fails the run
+ * instead of being mistaken for it.
+ */
 const addThread = (input: Record<string, unknown>): boolean => {
-  try {
-    const data = graphql<{ addPullRequestReviewThread: { thread: { id: string } | null } | null }>(ADD_THREAD, { input });
-    return Boolean(data.addPullRequestReviewThread?.thread);
-  } catch {
-    return false;
-  }
+  const data = graphql<{ addPullRequestReviewThread: { thread: { id: string } | null } | null }>(ADD_THREAD, { input });
+  return Boolean(data.addPullRequestReviewThread?.thread);
 };
 
 /**
- * Attaches a finding to the review: on its line when that line is part of the diff, on
- * the file as a whole when only the file is, and nowhere when the file is not in the diff.
- * A finding outside the diff is real but GitHub has no line to hang it on, so it is
- * reported in the summary instead of failing the review.
+ * Attaches a finding to the review at the most precise place GitHub accepts: its range of
+ * lines, then its last line alone (a range that crosses into unchanged code is refused as
+ * a whole), then the file, and nowhere when the file is not in the diff. A finding outside
+ * the diff is real but GitHub has no line to hang it on, so it is reported in the summary
+ * instead of failing the review.
  */
 const placeFinding = (reviewId: string, finding: Finding): 'line' | 'file' | 'unplaced' => {
+  const onLine = { pullRequestReviewId: reviewId, path: finding.path, line: finding.line, side: finding.side };
   const body = formatFinding(finding.severity, finding.body);
-  const onLine = addThread({
-    pullRequestReviewId: reviewId,
-    path: finding.path,
-    line: finding.line,
-    side: finding.side,
-    ...(finding.startLine ? { startLine: finding.startLine, startSide: finding.side } : {}),
-    body,
-  });
-  if (onLine) {
+  if (finding.startLine && addThread({ ...onLine, startLine: finding.startLine, startSide: finding.side, body })) {
+    return 'line';
+  }
+  if (addThread({ ...onLine, body })) {
     return 'line';
   }
   const onFile = addThread({

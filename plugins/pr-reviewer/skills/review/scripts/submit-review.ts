@@ -504,8 +504,9 @@ const main = (): number => {
       }
     }
 
-    // A comment does not replace an earlier request for changes, which would keep blocking the
-    // pull request under a summary that says "Approve". Dismissing it is what an approval would have done.
+    // A comment does not replace this account's earlier request for changes, which would keep blocking the
+    // pull request under a summary that says "Approve". Dismissing it is what an approval would have done,
+    // and no more than that: a request for changes by another account, such as the review bot's, stays.
     if (verdict === 'APPROVE' && event === 'COMMENT') {
       for (const earlier of state.changesRequested) {
         try {

@@ -75,7 +75,10 @@ export type ReviewState = {
    * one per account, so a new review cannot be started while it exists.
    */
   pendingReview: { id: string; isBot: boolean } | null;
-  /** Earlier reviews that requested changes and have not been dismissed. */
+  /**
+   * Earlier reviews by the account that posts this one which requested changes and have not been
+   * dismissed. Those of another account are left alone, as an approval would leave them.
+   */
   changesRequested: { id: string; url: string }[];
 };
 
@@ -455,6 +458,8 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
     pendingReview: pending ? { id: pending.id, isBot: toAuthor(pending.author).isBot } : null,
     changesRequested: reviews
       .filter((review) => review.state === 'CHANGES_REQUESTED' && isOurs(review.author, review.body))
+      // Without a login to compare with, the token is the review bot's, whose reviews are the ones that passed above.
+      .filter((review) => viewer === null || normalize(toAuthor(review.author).login) === normalize(viewer))
       .map((review) => ({ id: review.id, url: review.url })),
   };
 };

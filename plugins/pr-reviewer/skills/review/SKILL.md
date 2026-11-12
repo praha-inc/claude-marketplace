@@ -60,7 +60,7 @@ Run both of these skills on the pull request with the Skill tool, one after the 
 1. `code-review`, with the pull request number as its target. Do not pass `--comment` or `--fix`: this skill posts the findings, and a review does not change the code.
 2. `security-review`.
 
-Both report their findings back to you. Nothing is posted yet.
+Both report their findings back to you. Nothing is posted yet. A skill may run in the background and report later, so wait until both have reported before going on to step 4: a review posted from one of them alone would approve whatever the other was about to find.
 
 If one of the skills is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say in the summary that it was done without the skill.
 

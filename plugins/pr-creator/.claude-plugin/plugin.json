@@ -1,0 +1,8 @@
+{
+  "name": "pr-creator",
+  "description": "Implements an issue or a described change, reviews it with the code-review and security-review skills until nothing is left to fix, and opens a draft pull request linked to the issue.",
+  "author": {
+    "name": "PrAha, Inc.",
+    "url": "https://praha-inc.com"
+  }
+}

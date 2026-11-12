@@ -219,6 +219,15 @@ const reconcile = (review: Review, state: ReviewState): Answered[] => {
     }
   }
 
+  // Of two answers for one thread only the last would count, and they may disagree on whether it is resolved.
+  const seen = new Set<string>();
+  for (const { id } of review.threads) {
+    if (seen.has(id)) {
+      problems.push(`threads: ${id} is answered more than once. Give each thread one answer.`);
+    }
+    seen.add(id);
+  }
+
   const answers = new Map(review.threads.map((answer) => [answer.id, answer]));
   const open = new Map(state.openThreads.map((thread) => [thread.id, thread]));
   for (const id of answers.keys()) {

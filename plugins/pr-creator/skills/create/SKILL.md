@@ -64,7 +64,9 @@ Naming, the internals of a function, how to write a test: these are not risky de
 
 ## 4. Implement
 
-Read the code the change touches before writing any: the conventions, the neighbouring code, how similar things were done, and the project's instructions such as `CLAUDE.md` and the contributing guide. Check the history of the topic as well, unless the issue already records it: an approach that was tried and dropped, or a decision made in an earlier discussion, is invisible in the code, and when running on your own nobody is there to point it out. A few searches are enough, so do them yourself:
+Read the code the change touches before writing any: the conventions, the neighbouring code, how similar things were done, and the project's instructions such as `CLAUDE.md` and the contributing guide.
+
+If the repository has an `ARCHITECTURE.md`, read it first and implement the change the way it describes. Look at the root, under `docs/`, and in the directories the change touches, since a monorepo may have one for each package, and the one closest to the code is the one that applies. It says what the code alone does not: which layer a responsibility belongs to, which direction dependencies may point, and where new code goes. Follow it even where the neighbouring code does not, because existing code may predate it. If the work cannot be done within it, or the document and the code contradict each other in a way that changes what you would build, that is a risky decision: do not quietly depart from it. Check the history of the topic as well, unless the issue already records it: an approach that was tried and dropped, or a decision made in an earlier discussion, is invisible in the code, and when running on your own nobody is there to point it out. A few searches are enough, so do them yourself:
 
 - `gh issue list --state all --search "<keywords>"` and `gh pr list --state all --search "<keywords>"`, reading the ones that are about this topic, including closed pull requests that were not merged and why.
 - `git log --oneline -- <paths the change touches>`, for recent changes to the same code and reverts.

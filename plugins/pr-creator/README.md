@@ -27,7 +27,7 @@ Claude also uses the skill on its own when you ask it to implement something and
 1. **Understand**: Claude reads the issue with its comments, its parent, its sub-issues and what blocks it. It stops when the issue is closed, already has an open pull request, is blocked by unmerged work, or is a parent whose sub-issues are the real units of work.
 2. **Ask how to proceed**: Claude asks once whether to run on its own or to confirm the risky decisions with you.
 3. **Branch**: Claude creates a branch from the base branch, named the way the repository names its branches.
-4. **Implement**: Claude reads the surrounding code and the history of the topic (past issues and pull requests, including approaches that were dropped), implements the change with its tests, runs the project's checks, and commits.
+4. **Implement**: Claude reads the repository's `ARCHITECTURE.md` if it has one, the surrounding code and the history of the topic (past issues and pull requests, including approaches that were dropped), implements the change with its tests, runs the project's checks, and commits.
 5. **Check against the request**: The `verifier` agent reads the request and the change with no knowledge of how Claude read the request, and reports what is missing, what differs, and what was built without being asked for. Claude fixes what it finds.
 6. **Self-review**: Claude runs `/code-review` and `/security-review`, judges each finding, fixes the valid ones, and runs both again on the whole change. This repeats until a round finds nothing valid.
 7. **Link the issue**: Claude decides whether merging the pull request finishes the issue.
@@ -66,6 +66,7 @@ GitHub closes issues only from pull requests merged into the default branch. Wit
 ## Notes
 
 - The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to the repository, and Node.js 22.18 or later available as `node`, because its script is a TypeScript file run with Node.js type stripping.
+- When the repository has an `ARCHITECTURE.md`, at the root, under `docs/` or next to the code being changed, Claude implements the change the way it describes. Departing from it counts as a risky decision.
 - The pull request is always a draft. Mark it ready for review yourself once you have looked at it.
 - Each round of self-review runs both review skills, which start their own subagents, so a change that needs several rounds takes a while.
 - To have the pull request reviewed on GitHub afterwards, see [pr-reviewer](../pr-reviewer).

@@ -1,0 +1,192 @@
+---
+name: create
+description: Implement a piece of work, from a description or a GitHub issue, and open a draft pull request for it. Asks once whether to run on its own or to check the risky decisions with the user, implements the change on a branch, reviews it with the code-review and security-review skills, fixes the findings that hold up and reviews again until nothing is left, then opens a draft pull request linked to the issue so that merging closes it. Use this whenever the user asks to implement an issue or a change and open a pull request for it, to take an issue through to a pull request, or to open a pull request for work that is already on the branch, even if they do not name this skill.
+argument-hint: "[issue number or URL, or what to implement]"
+---
+
+# Create a pull request
+
+Take a piece of work from a description or an issue to a draft pull request: implement it, check it against what was asked and against the architecture, review it yourself until the review finds nothing, and open the pull request linked to its issue.
+
+The work, if it was given with the command: $ARGUMENTS
+
+Talk to the user in the language they use. Write commits and the pull request in the language the repository's recent pull requests are written in.
+
+The pull request is opened as a draft, and only after the self-review comes back clean. A draft tells reviewers the author is not asking for their time yet, which is right for work no person has looked at. Marking it ready is the user's decision.
+
+## 1. Understand the work
+
+Work out what is to be built and which issue it belongs to.
+
+- **An issue** (a number, a URL, or a description that names one): read it with the script. Pass a URL as it is, since a number means "in the repository of the current directory".
+
+  ```sh
+  node "${CLAUDE_SKILL_DIR}/scripts/fetch-issue.ts" <issue URL or number>
+  ```
+
+  It prints the `issue` with its body and latest comments, its `parent`, its `subIssues`, the `openBlockers` that must be merged first, the `openPullRequests` that already close it, and the repository's `defaultBranch`. Read the comments as well as the body: decisions made after the issue was written are in the thread. Read the parent too when there is one, for the reason behind the work.
+- **A description**: that is the work. If it mentions an issue, read it as above. Otherwise there is no issue to link, and that is fine.
+- **Nothing**: if the current branch already has commits that are not on the base branch, the work is what is on the branch, and the task is to review it and open its pull request. Otherwise ask what to implement.
+
+Stop and tell the user, instead of starting, when:
+
+- The issue is closed, or `openPullRequests` is not empty. Someone may already be doing this.
+- `openBlockers` is not empty. The work is meant to be built on changes that are not merged yet.
+- The issue has open `subIssues`. It is a parent that describes a whole outcome, and each sub-issue is its own pull request. Ask which sub-issue to implement.
+- The issue belongs to a different repository than the working tree.
+
+The user may tell you to go ahead anyway, and then you do.
+
+## 2. Ask how to proceed
+
+Ask the user once, with AskUserQuestion, how much to check with them on the way:
+
+- **Run on its own**: go all the way to the draft pull request without asking. You make every decision yourself and list the important ones in the pull request, where they are reviewed together with the code.
+- **Confirm the risky decisions**: you stop and ask at each decision that would be expensive to get wrong, and decide everything else yourself.
+
+Skip the question when the user already said which they want, and run on your own when nobody is there to answer, as in CI.
+
+A **risky decision** is one where a wrong guess means redoing work, not adjusting it:
+
+- A requirement that can be read in more than one way, where the readings lead to different implementations.
+- An interface other code or other people will depend on: the path, parameters and response of an API endpoint, a public function or type, an event or message format, a database schema or migration.
+- How a frontend is cut into components: where the boundaries are, which component owns which state, what the props are.
+- Anything else that the rest of the implementation is built on top of, or that is hard to change once merged, such as a new dependency or the place a new module lives.
+
+Naming, the internals of a function, how to write a test: these are not risky decisions. Getting them wrong costs a review comment. Asking about them makes the user do the work they handed over.
+
+## 3. Prepare the branch
+
+- Check `git status`. If there are uncommitted changes that are not part of this work, stop and ask, rather than carrying someone's unfinished work into the pull request or moving it aside.
+- Find the base branch: the repository's default branch, unless the user or the issue names another.
+- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 8 needs.
+- If the current branch is already a branch for this work, stay on it.
+
+## 4. Implement
+
+Read the code the change touches before writing any: the conventions, the neighbouring code, how similar things were done, and the project's instructions such as `CLAUDE.md` and the contributing guide.
+
+If the repository has an `ARCHITECTURE.md`, read it first and implement the change the way it describes. Look at the root, under `docs/`, and in the directories the change touches, since a monorepo may have one for each package, and the one closest to the code is the one that applies. It says what the code alone does not: which layer a responsibility belongs to, which direction dependencies may point, and where new code goes. Follow it even where the neighbouring code does not, because existing code may predate it. If the work cannot be done within it, or the document and the code contradict each other in a way that changes what you would build, that is a risky decision: do not quietly depart from it. Check the history of the topic as well, unless the issue already records it: an approach that was tried and dropped, or a decision made in an earlier discussion, is invisible in the code, and when running on your own nobody is there to point it out. A few searches are enough, so do them yourself:
+
+- `gh issue list --state all --search "<keywords>"` and `gh pr list --state all --search "<keywords>"`, reading the ones that are about this topic, including closed pull requests that were not merged and why.
+- `git log --oneline -- <paths the change touches>`, for recent changes to the same code and reverts.
+
+If the work goes against an earlier decision or repeats a dropped approach, that is a risky decision: say what was decided and why, and whether the reason still holds.
+
+Then list the risky decisions this work contains, with the choice you would make for each.
+
+- **Confirming the risky decisions**: before writing code, show the user the plan in a few lines and ask about the risky decisions together, each with its options, their trade-offs and your recommendation. Use AskUserQuestion where the answer is a choice. If another risky decision turns up while implementing, stop and ask again at that point, not after building on a guess.
+- **Running on its own**: make each decision as the issue, the code and the repository's conventions suggest, and keep a note of each with its reason. The notes go into the pull request in step 8. That is what makes it safe to decide alone: the reviewer sees the decision instead of having to notice it.
+
+In either mode, stop when the work cannot be done as described: the issue contradicts the code, or depends on something that does not exist. A pull request that quietly builds something else than was asked is worse than a question.
+
+Implement the change, with the tests it needs. Keep to the work: what you notice on the way that is not part of it belongs in a note to the user, not in this pull request.
+
+Then run the project's own checks, such as lint, type check, tests and build, as its scripts, CI workflows or instructions define them, and fix what fails. A check that already failed before the change is not yours to fix, but say so in the pull request.
+
+Commit the work, following the repository's conventions for commits. The review in the next step reads the branch against its base, so what is not committed may not be reviewed.
+
+## 5. Check the work against the request and the architecture
+
+The reviews in the next step look for bugs. They do not know what was asked for, so they cannot tell that a requirement is missing or was read differently than it was meant, and they do not check whether the change is structured the way the repository structures things. You cannot tell either: you check the work against your own reading of the request, and you chose the structure. So have both checked by agents that have not seen your reasoning. Start the two in a single message so they run in parallel.
+
+### The request
+
+Start the `pr-creator:verifier` agent and give it only:
+
+- The request: the URL of the issue, or the user's description in their own words, not your summary of it.
+- The decisions the user confirmed in step 4, if any. They are part of what was asked.
+- The base branch.
+
+Do not tell it how you read the request, what you decided on your own, or why the code is the way it is. Those are what it is there to check, and telling it would make it agree with you.
+
+Act on its report:
+
+- **Not met or partly met**: implement what is missing, run the checks, and commit. If it is left out on purpose, because it belongs in another pull request, keep it out and remember it for step 7: the pull request then does part of the issue.
+- **Not asked for**: remove it, unless the change cannot work without it. Unrequested changes make the pull request harder to review and are the first thing a reviewer questions.
+- **Ambiguities**, and requirements it read differently than you did: this is a risky decision of the first kind. When confirming with the user, ask. When running on your own, keep the reading the issue and the code support best, and note both readings for the pull request.
+- **Could not check**: check it yourself if you can, and otherwise list it in the test plan as not verified.
+
+Run the agent again after changes that add or remove behaviour, until its verdict is *complete*, or *partial* with only what you left out on purpose.
+
+### The architecture
+
+Start the `pr-creator:architect` agent and give it only the base branch. It checks the change against `ARCHITECTURE.md` when there is one, and otherwise against how the existing code is structured: where things are placed, which way dependencies point, and whether the change rebuilds something the repository already has.
+
+Act on its report:
+
+- **A departure from `ARCHITECTURE.md`**: restructure the change to follow the document, run the checks, and commit. If you departed on purpose because the work cannot be done within it, that is the risky decision from step 4: it must have been confirmed by the user, or be noted for the pull request with the reason.
+- **A departure from the existing code**, when there is no document: the standard is weaker here, so open the places the agent cites and judge whether they show a convention and whether following it is better for this change. Follow it when they do. When you keep your structure, note the reason for the pull request.
+- **Questions**, where the document is silent, contradictory or out of date: decide as you would any other decision, and mention it in the pull request so the document can be corrected.
+
+Run the agent again after restructuring, until it reports no departure you have not decided to keep.
+
+## 6. Review, fix, and review again
+
+Run both of these skills on the branch's changes with the Skill tool, one after the other, in this conversation rather than in a subagent, because they start their own subagents:
+
+1. `code-review`. Do not pass `--fix` or `--comment`: the findings come to you first, and there is no pull request yet.
+2. `security-review`.
+
+A skill may run in the background and report later, so wait until both have reported. If one of them is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say so in the pull request.
+
+Then judge every finding. A review skill reads the change without knowing why it was written, so some findings are wrong, and fixing a wrong finding makes the code worse.
+
+- **Valid**: the problem is real, and the change introduced it or made it worse. Open the code and confirm it, with the input or situation that triggers it. Fix it.
+- **Not valid**: the code is right as it is, the finding misreads it, it is about code this change did not touch, or it asks for something outside the work. Do not change the code. Keep a one-line note of the reason.
+- **A risky decision**: the fix would change one of the risky decisions, such as an interface. When confirming with the user, ask. When running on your own, decide and note it.
+
+Fix the valid findings at their cause, not only where they were noticed, run the project's checks again, and commit.
+
+If a fix changed what the code does, and not only how, run the `pr-creator:verifier` agent again as in step 5: a fix can remove a requirement as easily as a bug. If a fix moved code or added a dependency between parts of the code, run the `pr-creator:architect` agent again as well.
+
+Then run both reviews again, on the whole change and not only on the fixes: a fix can break something the earlier round had passed. Repeat until a round ends with no valid finding. Do not report a finding again that you already judged not valid, unless the new round gives a reason you had not considered.
+
+The loop is meant to end. Stop and tell the user where things stand, without opening the pull request, when:
+
+- Five rounds have passed and valid findings still come up.
+- A finding comes back after its fix, or two fixes undo each other. That usually means the design is the problem, which another round does not solve.
+- A valid finding cannot be fixed within this work.
+
+Say what was fixed, what remains and why it does not converge, and let the user decide whether to open the pull request as it is.
+
+## 7. Decide how the pull request refers to the issue
+
+Skip this step when there is no issue.
+
+GitHub closes an issue when a pull request whose description says `Closes #123` is merged into the default branch. Use it only when merging this pull request really finishes the issue:
+
+- **Close it** (`Closes #123`) when the change does everything the issue asks for, including its acceptance criteria, which is what the verifier's verdict *complete* says, and the issue has no open sub-issues.
+- **Only refer to it** (`Part of #123`) when the change does part of the issue, when more pull requests are planned for it, or when the issue is a parent whose other sub-issues are still open. An issue that closes with work left undone gets lost.
+- When the issue is a sub-issue, close the sub-issue and do not mention its parent with a closing keyword. GitHub shows the parent's progress on its own.
+- For an issue in another repository, write `Closes owner/repo#123`.
+- When the base is not the default branch, GitHub ignores the keyword. Write it anyway, and tell the user the issue will not close on merge.
+
+If the change deliberately leaves out something the issue asks for, it is "part of", and the pull request says what is left.
+
+## 8. Open the draft pull request
+
+Push the branch (`git push -u origin <branch>`) and write the description to a file outside the working tree's tracked files, so it cannot be committed by accident. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
+
+- **Summary**: what changed and why, for a reader who has not seen this conversation.
+- The line from step 7, on its own line.
+- **Decisions**: the risky decisions and what was chosen, with the reason, including a requirement that could be read in more than one way and the reading that was implemented. When running on your own, mark the ones nobody confirmed, so the reviewer knows where to look first.
+- **Architecture**: only when something is to be said: a departure from `ARCHITECTURE.md` or from the existing structure that was kept, with the reason, and places where the document turned out to be silent or out of date.
+- **Self-review**: how many rounds were run, what they found and fixed in a line each, and the findings judged not valid with their reason, so the reviewer does not raise them again.
+- **Test plan**: the checks that were run and their result, and what was not verified.
+
+Create it as a draft, with a title and labels in the repository's conventions from step 3:
+
+```sh
+gh pr create --draft --base <base> --title "<title>" --body-file <file>
+```
+
+Then confirm the link, because a closing keyword that GitHub did not recognise fails silently:
+
+```sh
+gh pr view --json url,isDraft,closingIssuesReferences
+```
+
+`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, then delete the file.
+
+Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified.

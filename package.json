@@ -11,7 +11,7 @@
     "@praha/oxlint-config-standard": "1.0.3",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "26.6.6",
-    "oxlint": "1.92.0",
+    "oxlint": "1.93.0",
     "oxlint-tsgolint": "7.0.2006",
     "typescript": "7.0.2"
   }

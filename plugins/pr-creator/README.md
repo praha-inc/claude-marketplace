@@ -28,7 +28,7 @@ Claude also uses the skill on its own when you ask it to implement something and
 2. **Ask how to proceed**: Claude asks once whether to run on its own or to confirm the risky decisions with you.
 3. **Branch**: Claude creates a branch from the base branch, named the way the repository names its branches.
 4. **Implement**: Claude reads the repository's `ARCHITECTURE.md` if it has one, the surrounding code and the history of the topic (past issues and pull requests, including approaches that were dropped), implements the change with its tests, runs the project's checks, and commits.
-5. **Check against the request**: The `verifier` agent reads the request and the change with no knowledge of how Claude read the request, and reports what is missing, what differs, and what was built without being asked for. Claude fixes what it finds.
+5. **Check against the request and the architecture**: Two agents run in parallel, with no knowledge of Claude's reasoning. The `verifier` reports what is missing from the request, what differs, and what was built without being asked for. The `architect` reports where the change departs from `ARCHITECTURE.md`, or from the structure of the existing code when there is no such document. Claude fixes what they find.
 6. **Self-review**: Claude runs `/code-review` and `/security-review`, judges each finding, fixes the valid ones, and runs both again on the whole change. This repeats until a round finds nothing valid.
 7. **Link the issue**: Claude decides whether merging the pull request finishes the issue.
 8. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue.
@@ -47,6 +47,15 @@ A risky decision is one where a wrong guess means redoing work: a requirement th
 The review skills look for bugs, not for whether the right thing was built, and Claude checks its work against its own reading of the request. The `verifier` agent is therefore given only the request, the decisions you confirmed, and the base branch. It lists each requirement as met, not met or partly met, with the code that delivers it, and the parts of the change that serve no requirement. It only reads: it does not edit files or change anything on GitHub.
 
 Its verdict also decides how the pull request refers to the issue: only a change that delivers everything closes it.
+
+### Check against the architecture
+
+The `architect` agent is given only the base branch.
+
+- **With an `ARCHITECTURE.md`**: the document is the standard. The agent reports each part of the change that goes against it, quoting the sentence. The change follows the document even where the neighbouring code does not.
+- **Without one**: the existing code is the standard, and the check is limited to structure: where code is placed, which way dependencies point, and whether the change rebuilds something the repository already has. A departure is reported only with at least two existing places that show the convention. Naming and formatting are not reported.
+
+Like the `verifier`, it only reads.
 
 ### Self-review
 

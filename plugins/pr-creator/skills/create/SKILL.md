@@ -6,7 +6,7 @@ argument-hint: "[issue number or URL, or what to implement]"
 
 # Create a pull request
 
-Take a piece of work from a description or an issue to a draft pull request: implement it, check it against what was asked, review it yourself until the review finds nothing, and open the pull request linked to its issue.
+Take a piece of work from a description or an issue to a draft pull request: implement it, check it against what was asked and against the architecture, review it yourself until the review finds nothing, and open the pull request linked to its issue.
 
 The work, if it was given with the command: $ARGUMENTS
 
@@ -86,9 +86,11 @@ Then run the project's own checks, such as lint, type check, tests and build, as
 
 Commit the work, following the repository's conventions for commits. The review in the next step reads the branch against its base, so what is not committed may not be reviewed.
 
-## 5. Check the work against the request
+## 5. Check the work against the request and the architecture
 
-The reviews in the next step look for bugs. They do not know what was asked for, so they cannot tell that a requirement is missing or was read differently than it was meant. You cannot tell either: you check the work against your own reading of the request. So have it checked by someone who has not seen your reasoning.
+The reviews in the next step look for bugs. They do not know what was asked for, so they cannot tell that a requirement is missing or was read differently than it was meant, and they do not check whether the change is structured the way the repository structures things. You cannot tell either: you check the work against your own reading of the request, and you chose the structure. So have both checked by agents that have not seen your reasoning. Start the two in a single message so they run in parallel.
+
+### The request
 
 Start the `pr-creator:verifier` agent and give it only:
 
@@ -107,6 +109,18 @@ Act on its report:
 
 Run the agent again after changes that add or remove behaviour, until its verdict is *complete*, or *partial* with only what you left out on purpose.
 
+### The architecture
+
+Start the `pr-creator:architect` agent and give it only the base branch. It checks the change against `ARCHITECTURE.md` when there is one, and otherwise against how the existing code is structured: where things are placed, which way dependencies point, and whether the change rebuilds something the repository already has.
+
+Act on its report:
+
+- **A departure from `ARCHITECTURE.md`**: restructure the change to follow the document, run the checks, and commit. If you departed on purpose because the work cannot be done within it, that is the risky decision from step 4: it must have been confirmed by the user, or be noted for the pull request with the reason.
+- **A departure from the existing code**, when there is no document: the standard is weaker here, so open the places the agent cites and judge whether they show a convention and whether following it is better for this change. Follow it when they do. When you keep your structure, note the reason for the pull request.
+- **Questions**, where the document is silent, contradictory or out of date: decide as you would any other decision, and mention it in the pull request so the document can be corrected.
+
+Run the agent again after restructuring, until it reports no departure you have not decided to keep.
+
 ## 6. Review, fix, and review again
 
 Run both of these skills on the branch's changes with the Skill tool, one after the other, in this conversation rather than in a subagent, because they start their own subagents:
@@ -124,7 +138,7 @@ Then judge every finding. A review skill reads the change without knowing why it
 
 Fix the valid findings at their cause, not only where they were noticed, run the project's checks again, and commit.
 
-If a fix changed what the code does, and not only how, run the `pr-creator:verifier` agent again as in step 5: a fix can remove a requirement as easily as a bug.
+If a fix changed what the code does, and not only how, run the `pr-creator:verifier` agent again as in step 5: a fix can remove a requirement as easily as a bug. If a fix moved code or added a dependency between parts of the code, run the `pr-creator:architect` agent again as well.
 
 Then run both reviews again, on the whole change and not only on the fixes: a fix can break something the earlier round had passed. Repeat until a round ends with no valid finding. Do not report a finding again that you already judged not valid, unless the new round gives a reason you had not considered.
 
@@ -157,6 +171,7 @@ Push the branch (`git push -u origin <branch>`) and write the description to a f
 - **Summary**: what changed and why, for a reader who has not seen this conversation.
 - The line from step 7, on its own line.
 - **Decisions**: the risky decisions and what was chosen, with the reason, including a requirement that could be read in more than one way and the reading that was implemented. When running on your own, mark the ones nobody confirmed, so the reviewer knows where to look first.
+- **Architecture**: only when something is to be said: a departure from `ARCHITECTURE.md` or from the existing structure that was kept, with the reason, and places where the document turned out to be silent or out of date.
 - **Self-review**: how many rounds were run, what they found and fixed in a line each, and the findings judged not valid with their reason, so the reviewer does not raise them again.
 - **Test plan**: the checks that were run and their result, and what was not verified.
 

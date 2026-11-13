@@ -130,6 +130,8 @@ Run both of these skills on the branch's changes with the Skill tool, one after 
 
 A skill may run in the background and report later, so wait until both have reported. If one of them is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say so in the pull request.
 
+**A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to judge the findings. Do not end your turn after either report, in any round: the work is not fixed and no pull request exists at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with nothing opened. This task is finished only when step 8 has opened the pull request, or when this step tells you to stop and report.
+
 Then judge every finding. A review skill reads the change without knowing why it was written, so some findings are wrong, and fixing a wrong finding makes the code worse.
 
 - **Valid**: the problem is real, and the change introduced it or made it worse. Open the code and confirm it, with the input or situation that triggers it. Fix it.

@@ -6,7 +6,7 @@ argument-hint: "[issue number or URL, or what to implement]"
 
 # Create a pull request
 
-Take a piece of work from a description or an issue to a draft pull request: implement it, review it yourself until the review finds nothing, and open the pull request linked to its issue.
+Take a piece of work from a description or an issue to a draft pull request: implement it, check it against what was asked, review it yourself until the review finds nothing, and open the pull request linked to its issue.
 
 The work, if it was given with the command: $ARGUMENTS
 
@@ -59,15 +59,22 @@ Naming, the internals of a function, how to write a test: these are not risky de
 
 - Check `git status`. If there are uncommitted changes that are not part of this work, stop and ask, rather than carrying someone's unfinished work into the pull request or moving it aside.
 - Find the base branch: the repository's default branch, unless the user or the issue names another.
-- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 7 needs.
+- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 8 needs.
 - If the current branch is already a branch for this work, stay on it.
 
 ## 4. Implement
 
-Read the code the change touches before writing any: the conventions, the neighbouring code, how similar things were done, and the project's instructions such as `CLAUDE.md` and the contributing guide. Then list the risky decisions this work contains, with the choice you would make for each.
+Read the code the change touches before writing any: the conventions, the neighbouring code, how similar things were done, and the project's instructions such as `CLAUDE.md` and the contributing guide. Check the history of the topic as well, unless the issue already records it: an approach that was tried and dropped, or a decision made in an earlier discussion, is invisible in the code, and when running on your own nobody is there to point it out. A few searches are enough, so do them yourself:
+
+- `gh issue list --state all --search "<keywords>"` and `gh pr list --state all --search "<keywords>"`, reading the ones that are about this topic, including closed pull requests that were not merged and why.
+- `git log --oneline -- <paths the change touches>`, for recent changes to the same code and reverts.
+
+If the work goes against an earlier decision or repeats a dropped approach, that is a risky decision: say what was decided and why, and whether the reason still holds.
+
+Then list the risky decisions this work contains, with the choice you would make for each.
 
 - **Confirming the risky decisions**: before writing code, show the user the plan in a few lines and ask about the risky decisions together, each with its options, their trade-offs and your recommendation. Use AskUserQuestion where the answer is a choice. If another risky decision turns up while implementing, stop and ask again at that point, not after building on a guess.
-- **Running on its own**: make each decision as the issue, the code and the repository's conventions suggest, and keep a note of each with its reason. The notes go into the pull request in step 7. That is what makes it safe to decide alone: the reviewer sees the decision instead of having to notice it.
+- **Running on its own**: make each decision as the issue, the code and the repository's conventions suggest, and keep a note of each with its reason. The notes go into the pull request in step 8. That is what makes it safe to decide alone: the reviewer sees the decision instead of having to notice it.
 
 In either mode, stop when the work cannot be done as described: the issue contradicts the code, or depends on something that does not exist. A pull request that quietly builds something else than was asked is worse than a question.
 
@@ -77,7 +84,28 @@ Then run the project's own checks, such as lint, type check, tests and build, as
 
 Commit the work, following the repository's conventions for commits. The review in the next step reads the branch against its base, so what is not committed may not be reviewed.
 
-## 5. Review, fix, and review again
+## 5. Check the work against the request
+
+The reviews in the next step look for bugs. They do not know what was asked for, so they cannot tell that a requirement is missing or was read differently than it was meant. You cannot tell either: you check the work against your own reading of the request. So have it checked by someone who has not seen your reasoning.
+
+Start the `pr-creator:verifier` agent and give it only:
+
+- The request: the URL of the issue, or the user's description in their own words, not your summary of it.
+- The decisions the user confirmed in step 4, if any. They are part of what was asked.
+- The base branch.
+
+Do not tell it how you read the request, what you decided on your own, or why the code is the way it is. Those are what it is there to check, and telling it would make it agree with you.
+
+Act on its report:
+
+- **Not met or partly met**: implement what is missing, run the checks, and commit. If it is left out on purpose, because it belongs in another pull request, keep it out and remember it for step 7: the pull request then does part of the issue.
+- **Not asked for**: remove it, unless the change cannot work without it. Unrequested changes make the pull request harder to review and are the first thing a reviewer questions.
+- **Ambiguities**, and requirements it read differently than you did: this is a risky decision of the first kind. When confirming with the user, ask. When running on your own, keep the reading the issue and the code support best, and note both readings for the pull request.
+- **Could not check**: check it yourself if you can, and otherwise list it in the test plan as not verified.
+
+Run the agent again after changes that add or remove behaviour, until its verdict is *complete*, or *partial* with only what you left out on purpose.
+
+## 6. Review, fix, and review again
 
 Run both of these skills on the branch's changes with the Skill tool, one after the other, in this conversation rather than in a subagent, because they start their own subagents:
 
@@ -90,9 +118,11 @@ Then judge every finding. A review skill reads the change without knowing why it
 
 - **Valid**: the problem is real, and the change introduced it or made it worse. Open the code and confirm it, with the input or situation that triggers it. Fix it.
 - **Not valid**: the code is right as it is, the finding misreads it, it is about code this change did not touch, or it asks for something outside the work. Do not change the code. Keep a one-line note of the reason.
-- **A risky decision**: the fix would change one of the decisions from step 2, such as an interface. When confirming with the user, ask. When running on your own, decide and note it.
+- **A risky decision**: the fix would change one of the risky decisions, such as an interface. When confirming with the user, ask. When running on your own, decide and note it.
 
 Fix the valid findings at their cause, not only where they were noticed, run the project's checks again, and commit.
+
+If a fix changed what the code does, and not only how, run the `pr-creator:verifier` agent again as in step 5: a fix can remove a requirement as easily as a bug.
 
 Then run both reviews again, on the whole change and not only on the fixes: a fix can break something the earlier round had passed. Repeat until a round ends with no valid finding. Do not report a finding again that you already judged not valid, unless the new round gives a reason you had not considered.
 
@@ -104,13 +134,13 @@ The loop is meant to end. Stop and tell the user where things stand, without ope
 
 Say what was fixed, what remains and why it does not converge, and let the user decide whether to open the pull request as it is.
 
-## 6. Decide how the pull request refers to the issue
+## 7. Decide how the pull request refers to the issue
 
 Skip this step when there is no issue.
 
 GitHub closes an issue when a pull request whose description says `Closes #123` is merged into the default branch. Use it only when merging this pull request really finishes the issue:
 
-- **Close it** (`Closes #123`) when the change does everything the issue asks for, including its acceptance criteria, and the issue has no open sub-issues.
+- **Close it** (`Closes #123`) when the change does everything the issue asks for, including its acceptance criteria, which is what the verifier's verdict *complete* says, and the issue has no open sub-issues.
 - **Only refer to it** (`Part of #123`) when the change does part of the issue, when more pull requests are planned for it, or when the issue is a parent whose other sub-issues are still open. An issue that closes with work left undone gets lost.
 - When the issue is a sub-issue, close the sub-issue and do not mention its parent with a closing keyword. GitHub shows the parent's progress on its own.
 - For an issue in another repository, write `Closes owner/repo#123`.
@@ -118,13 +148,13 @@ GitHub closes an issue when a pull request whose description says `Closes #123` 
 
 If the change deliberately leaves out something the issue asks for, it is "part of", and the pull request says what is left.
 
-## 7. Open the draft pull request
+## 8. Open the draft pull request
 
 Push the branch (`git push -u origin <branch>`) and write the description to a file outside the working tree's tracked files, so it cannot be committed by accident. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
 
 - **Summary**: what changed and why, for a reader who has not seen this conversation.
-- The line from step 6, on its own line.
-- **Decisions**: the risky decisions and what was chosen, with the reason. When running on your own, mark the ones nobody confirmed, so the reviewer knows where to look first.
+- The line from step 7, on its own line.
+- **Decisions**: the risky decisions and what was chosen, with the reason, including a requirement that could be read in more than one way and the reading that was implemented. When running on your own, mark the ones nobody confirmed, so the reviewer knows where to look first.
 - **Self-review**: how many rounds were run, what they found and fixed in a line each, and the findings judged not valid with their reason, so the reviewer does not raise them again.
 - **Test plan**: the checks that were run and their result, and what was not verified.
 
@@ -140,6 +170,6 @@ Then confirm the link, because a closing keyword that GitHub did not recognise f
 gh pr view --json url,isDraft,closingIssuesReferences
 ```
 
-`closingIssuesReferences` must contain the issue when step 6 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, then delete the file.
+`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, then delete the file.
 
 Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified.

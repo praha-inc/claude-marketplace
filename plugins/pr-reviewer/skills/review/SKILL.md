@@ -64,11 +64,13 @@ Run both of these skills on the pull request with the Skill tool, one after the 
 
 Both report their findings back to you. Nothing is posted yet. A skill may run in the background and report later, so wait until both have reported before going on to step 4: a review posted from one of them alone would approve whatever the other was about to find.
 
+**A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to step 4. Do not end your turn after either report: nothing has been posted to the pull request at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with no review. This task is finished only when step 6 has posted the review.
+
 If one of the skills is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say in the summary that it was done without the skill.
 
 ## 4. Decide what to post
 
-Gather the findings from both skills and go through them:
+You are here straight after the reports of step 3, in the same turn. Gather the findings from both skills and go through them:
 
 - **Drop duplicates.** The two skills can report the same problem. So can an open thread from step 2: a problem that already has an open thread is answered there, not posted again.
 - **Drop what does not hold up.** Open the code a finding points to and confirm it. A wrong comment costs the author more time than a missed nit, and it teaches them to skim the next review.

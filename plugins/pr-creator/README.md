@@ -27,10 +27,11 @@ Claude also uses the skill on its own when you ask it to implement something and
 1. **Understand**: Claude reads the issue with its comments, its parent, its sub-issues and what blocks it. It stops when the issue is closed, already has an open pull request, is blocked by unmerged work, or is a parent whose sub-issues are the real units of work.
 2. **Ask how to proceed**: Claude asks once whether to run on its own or to confirm the risky decisions with you.
 3. **Branch**: Claude creates a branch from the base branch, named the way the repository names its branches.
-4. **Implement**: Claude reads the surrounding code, implements the change with its tests, runs the project's checks, and commits.
-5. **Self-review**: Claude runs `/code-review` and `/security-review`, judges each finding, fixes the valid ones, and runs both again on the whole change. This repeats until a round finds nothing valid.
-6. **Link the issue**: Claude decides whether merging the pull request finishes the issue.
-7. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue.
+4. **Implement**: Claude reads the surrounding code and the history of the topic (past issues and pull requests, including approaches that were dropped), implements the change with its tests, runs the project's checks, and commits.
+5. **Check against the request**: The `verifier` agent reads the request and the change with no knowledge of how Claude read the request, and reports what is missing, what differs, and what was built without being asked for. Claude fixes what it finds.
+6. **Self-review**: Claude runs `/code-review` and `/security-review`, judges each finding, fixes the valid ones, and runs both again on the whole change. This repeats until a round finds nothing valid.
+7. **Link the issue**: Claude decides whether merging the pull request finishes the issue.
+8. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue.
 
 ### The two modes
 
@@ -40,6 +41,12 @@ Claude also uses the skill on its own when you ask it to implement something and
 | Confirm the risky decisions | Shows the plan and asks about the risky decisions before writing code, and again whenever a new one turns up. Everything else it decides itself. |
 
 A risky decision is one where a wrong guess means redoing work: a requirement that can be read in more than one way, an interface others depend on (an API endpoint, a public type, a database schema), how a frontend is cut into components, or anything else the rest of the implementation is built on.
+
+### Check against the request
+
+The review skills look for bugs, not for whether the right thing was built, and Claude checks its work against its own reading of the request. The `verifier` agent is therefore given only the request, the decisions you confirmed, and the base branch. It lists each requirement as met, not met or partly met, with the code that delivers it, and the parts of the change that serve no requirement. It only reads: it does not edit files or change anything on GitHub.
+
+Its verdict also decides how the pull request refers to the issue: only a change that delivers everything closes it.
 
 ### Self-review
 

@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "@praha/oxlint-config-standard": "1.0.3",
-    "@tsconfig/strictest": "2.0.8",
+    "@tsconfig/strictest": "2.0.9",
     "@types/node": "26.6.6",
     "oxlint": "1.93.0",
     "oxlint-tsgolint": "7.0.2006",

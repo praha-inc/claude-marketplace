@@ -28,10 +28,10 @@ node "${CLAUDE_SKILL_DIR}/scripts/fetch-review-state.ts" <url>
 
 It prints JSON with:
 
+- `reviewFile`: the path to write the review to in step 5.
 - `repository` and `pullRequest`: its `number`, `state`, `headSha`, `headRef`, `baseRef` and `author`.
 - `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the conversation in `comments`, starting with the finding. When the code changed, `line` is `null`, and `originalLine` and `diffHunk` show where the finding was left and what the code looked like then.
 - `changedFiles`: the paths of the files the pull request changes, which are the only files a finding can be placed on.
-- `reviewFile`: the path to write the review to in step 5.
 - `previousSummaries`: the summaries of earlier reviews that are still visible, each with the ids of its threads that are still open.
 
 Stop if the pull request is not `OPEN`, and say so.
@@ -65,6 +65,8 @@ Run both of these skills on the pull request with the Skill tool, one after the 
 Both report their findings back to you. Nothing is posted yet. A skill may run in the background and report later, so wait until both have reported before going on to step 4: a review posted from one of them alone would approve whatever the other was about to find.
 
 **A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to step 4. Do not end your turn after either report: nothing has been posted to the pull request at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with no review. This task is finished only when step 6 has posted the review.
+
+The plugin's Stop hook checks this. When the turn ends while the review file of step 1 has not been posted, it blocks the stop and sends you back here, at most twice for one review file. It is a safety net, not a step: do not end the turn expecting it to carry you on. When you stop on purpose, as steps 1 and 6 tell you to in some cases, it cannot tell, so it asks once more. Say again why you stopped, and stop.
 
 If one of the skills is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say in the summary that it was done without the skill.
 

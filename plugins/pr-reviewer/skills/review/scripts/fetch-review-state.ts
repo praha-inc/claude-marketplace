@@ -5,7 +5,8 @@
  *
  * The output also names a `reviewFile` in a new temporary directory, which is where the
  * review is to be written for submit-review.ts. Handing out the path here keeps the file
- * out of the repository without the caller having to run any other command for it.
+ * out of the repository without the caller having to run any other command for it. It is
+ * `null` when the pull request is not open.
  *
  * Usage: node fetch-review-state.ts <pull request URL>
  *        node fetch-review-state.ts <pull request number> [owner/repo]
@@ -18,7 +19,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { fetchReviewState, gh, parsePullRequestUrl, REVIEW_DIRECTORY_PREFIX } from './github.ts';
+import { fetchReviewState, gh, parsePullRequestUrl, REVIEW_DIRECTORY_PREFIX, REVIEW_FILE_NAME } from './github.ts';
 
 /**
  * The repository of the current directory, with its host: `gh` finds it through the git
@@ -44,8 +45,13 @@ const main = (): number => {
       fromUrl?.repository ?? repository ?? currentRepository(),
       fromUrl?.number ?? Number(target),
     );
-    const reviewFile = path.join(mkdtempSync(path.join(tmpdir(), REVIEW_DIRECTORY_PREFIX)), 'review.json');
-    process.stdout.write(`${JSON.stringify({ ...state, reviewFile }, null, 2)}\n`);
+    // Not for a pull request that is closed or merged: it is not reviewed, and the directory
+    // is how stop-hook.ts tells that a review was started and not posted yet.
+    const reviewFile = state.pullRequest.state === 'OPEN'
+      ? path.join(mkdtempSync(path.join(tmpdir(), REVIEW_DIRECTORY_PREFIX)), REVIEW_FILE_NAME)
+      : null;
+    // First, so that it is still there when a long output is cut off: stop-hook.ts reads it from the transcript.
+    process.stdout.write(`${JSON.stringify({ reviewFile, ...state }, null, 2)}\n`);
     return 0;
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);

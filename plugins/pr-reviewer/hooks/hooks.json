@@ -1,0 +1,16 @@
+{
+  "description": "Keep a review from ending before it is posted",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/review/scripts/stop-hook.ts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

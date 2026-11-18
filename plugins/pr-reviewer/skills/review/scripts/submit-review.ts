@@ -22,7 +22,7 @@
 import { readFileSync, rmdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-import { fetchReviewState, formatFinding, REVIEW_DIRECTORY_PREFIX, graphql, isSameAccount, isSeverity, SEVERITIES, SUMMARY_MARKER } from './github.ts';
+import { fetchReviewState, formatFinding, POSTED_LINE_PREFIX, REVIEW_DIRECTORY_PREFIX, graphql, isSameAccount, isSeverity, SEVERITIES, STOP_BLOCKS_FILE_NAME, SUMMARY_MARKER } from './github.ts';
 
 import type { OpenThread, ReviewState, Severity } from './github.ts';
 
@@ -401,12 +401,14 @@ const message = (error: unknown): string => {
 
 /**
  * Deletes a posted review file, and its directory when fetch-review-state.ts made it.
+ * The directory being gone is what tells stop-hook.ts that the review was posted.
  */
 const discard = (file: string): void => {
   try {
     rmSync(file);
     const directory = path.dirname(path.resolve(file));
     if (path.basename(directory).startsWith(REVIEW_DIRECTORY_PREFIX)) {
+      rmSync(path.join(directory, STOP_BLOCKS_FILE_NAME), { force: true });
       rmdirSync(directory);
     }
   } catch {
@@ -546,7 +548,7 @@ const main = (): number => {
     discard(file);
     process.stdout.write(
       [
-        `Posted: ${url}`,
+        `${POSTED_LINE_PREFIX}${url}`,
         `Verdict: ${VERDICTS[verdict]}${event === 'COMMENT' ? ' (posted as a comment)' : ''}`,
         `New findings: ${review.findings.length}`,
         `Earlier threads resolved: ${answered.filter(({ answer }) => answer.status === 'resolved').length} of ${answered.length}`,

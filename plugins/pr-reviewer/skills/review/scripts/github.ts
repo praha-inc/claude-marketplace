@@ -92,6 +92,15 @@ export const SEVERITIES: Record<Severity, { emoji: string; label: string }> = {
 /** The start of the name of the temporary directory that holds a review file. */
 export const REVIEW_DIRECTORY_PREFIX = 'pr-reviewer-';
 
+/** The name of the review file in that directory. */
+export const REVIEW_FILE_NAME = 'review.json';
+
+/** The name of the file in that directory where stop-hook.ts counts the stops it blocked. */
+export const STOP_BLOCKS_FILE_NAME = 'stop-blocks';
+
+/** The start of the line submit-review.ts prints once a review is posted, which stop-hook.ts looks for. */
+export const POSTED_LINE_PREFIX = 'Posted: ';
+
 export const SUMMARY_MARKER = '<!-- pr-reviewer:summary -->';
 
 const FINDING_MARKER = /<!-- pr-reviewer:finding severity=\w+ -->/;

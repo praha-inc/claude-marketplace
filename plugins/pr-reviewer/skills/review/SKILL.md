@@ -28,10 +28,10 @@ node "${CLAUDE_SKILL_DIR}/scripts/fetch-review-state.ts" <url>
 
 It prints JSON with:
 
+- `reviewFile`: the path to write the review to in step 5, or `null` when the pull request is not open.
 - `repository` and `pullRequest`: its `number`, `state`, `headSha`, `headRef`, `baseRef` and `author`.
 - `openThreads`: the unresolved threads started by an earlier review, each with its `id`, `path`, `line`, `severity`, whether it `isOutdated` (the code under it changed), and the conversation in `comments`, starting with the finding. When the code changed, `line` is `null`, and `originalLine` and `diffHunk` show where the finding was left and what the code looked like then.
 - `changedFiles`: the paths of the files the pull request changes, which are the only files a finding can be placed on.
-- `reviewFile`: the path to write the review to in step 5.
 - `previousSummaries`: the summaries of earlier reviews that are still visible, each with the ids of its threads that are still open.
 
 Stop if the pull request is not `OPEN`, and say so.
@@ -64,13 +64,13 @@ Run both of these skills on the pull request with the Skill tool, one after the 
 
 Both report their findings back to you. Nothing is posted yet. A skill may run in the background and report later, so wait until both have reported before going on to step 4: a review posted from one of them alone would approve whatever the other was about to find.
 
-**A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to step 4. Do not end your turn after either report: nothing has been posted to the pull request at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with no review. This task is finished only when step 6 has posted the review.
+The plugin's Stop hook sends you back when the turn ends while the review file of step 1 has not been posted, at most three times for one review file. It cannot tell why the turn ended, so it also does that when you stop on purpose: when step 1 tells you to, or to wait for a review skill that runs in the background. Say in one sentence why you stopped, and stop: a stop that follows with no tool use in between is let through. Do not post a review that is not ready because the hook asked.
 
 If one of the skills is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say in the summary that it was done without the skill.
 
 ## 4. Decide what to post
 
-You are here straight after the reports of step 3, in the same turn. Gather the findings from both skills and go through them:
+Gather the findings from both skills and go through them:
 
 - **Drop duplicates.** The two skills can report the same problem. So can an open thread from step 2: a problem that already has an open thread is answered there, not posted again.
 - **Drop what does not hold up.** Open the code a finding points to and confirm it. A wrong comment costs the author more time than a missed nit, and it teaches them to skim the next review.

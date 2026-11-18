@@ -10,25 +10,38 @@
  *
  * Whether a review is pending is read from two places:
  * - The transcript of the session, for the `reviewFile` that fetch-review-state.ts printed
- *   last. Only the output of that command is read, not the rest of the transcript, which
- *   holds text written by the author of the pull request.
+ *   last, and for a review that submit-review.ts posted. Only the output of those two
+ *   commands is read, not the rest of the transcript, which holds text written by the
+ *   author of the pull request.
  * - The file system: submit-review.ts deletes the directory of the review file once the
  *   review is posted, so a directory that is still there means it was not.
  *
- * A stop is blocked at most `MAX_BLOCKS` times for one review file, so a stop that is meant
- * (the pull request is closed, the working tree has uncommitted changes) goes through after
- * Claude has said why, and a run that cannot post never loops.
+ * The hook would rather miss a review that was cut short than push for one that is not
+ * wanted, because what it pushes for is posted to the pull request:
+ * - Once the session has posted a review, it does nothing more. A directory can be left
+ *   over after that (fetch-review-state.ts was run again to look at the result, or the
+ *   directory could not be deleted), and blocking then would ask for a second review.
+ * - A stop is blocked at most `MAX_BLOCKS` times for one review file, so a stop that is
+ *   meant goes through after Claude has said why, and a run that cannot post never loops.
+ *   Stops that are meant: the pull request is closed, the working tree has uncommitted
+ *   changes, a review skill is still running in the background, or the script was run by
+ *   hand without the skill.
  *
  * Any failure in here lets the stop through: a hook that cannot tell must not hold a session.
  */
 import { lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { REVIEW_DIRECTORY_PREFIX, REVIEW_FILE_NAME, STOP_BLOCKS_FILE_NAME } from './github.ts';
+import { POSTED_LINE_PREFIX, REVIEW_DIRECTORY_PREFIX, REVIEW_FILE_NAME, STOP_BLOCKS_FILE_NAME } from './github.ts';
 
-const MAX_BLOCKS = 2;
+/**
+ * One more than the stop this hook is for, because waiting for a review skill that runs in
+ * the background is a stop as well, and uses one up.
+ */
+const MAX_BLOCKS = 3;
 
 const FETCH_SCRIPT = 'fetch-review-state.ts';
+const SUBMIT_SCRIPT = 'submit-review.ts';
 
 /** The `reviewFile` property as fetch-review-state.ts prints it, with its value as a JSON string literal. */
 const REVIEW_FILE_PROPERTY = /"reviewFile":\s*("(?:[^"\\]|\\.)*")/;
@@ -84,35 +97,52 @@ const parseReviewFile = (output: string): string | undefined => {
   }
 };
 
+const isPosted = (output: string): boolean => {
+  return output.split('\n').some((line) => line.startsWith(POSTED_LINE_PREFIX));
+};
+
 /**
- * The review file that the last run of fetch-review-state.ts in this session handed out.
- * An earlier one was given up when the skill went back to its first step.
+ * What the session did about a review: the review file that the last run of
+ * fetch-review-state.ts handed out (an earlier one was given up when the skill went back
+ * to its first step), and whether submit-review.ts posted a review.
  */
-const findReviewFile = (transcript: string): string | undefined => {
+const readTranscript = (transcript: string): { reviewFile: string | undefined; posted: boolean } => {
+  // The calls of each script by the id of the tool use, which is what its result refers to.
   const fetchCalls = new Set<string>();
+  const submitCalls = new Set<string>();
   let reviewFile: string | undefined;
+  let posted = false;
   for (const line of transcript.split('\n')) {
-    // Most lines are neither, and parsing every one of a long transcript is slow.
-    if (!line.includes(FETCH_SCRIPT) && !line.includes('reviewFile')) {
+    // Most lines are about neither script, and parsing every line of a long transcript is slow.
+    if (!line.includes(FETCH_SCRIPT) && !line.includes(SUBMIT_SCRIPT) && !line.includes('reviewFile') && !line.includes(POSTED_LINE_PREFIX)) {
       continue;
     }
     for (const block of blocksOf(line)) {
-      if (block['type'] === 'tool_use' && block['name'] === 'Bash' && typeof block['id'] === 'string') {
+      // Whichever tool ran the command: the shell tool has another name on Windows.
+      if (block['type'] === 'tool_use' && typeof block['id'] === 'string') {
         const command = isRecord(block['input']) ? block['input']['command'] : undefined;
-        if (typeof command === 'string' && command.includes(FETCH_SCRIPT)) {
+        if (typeof command !== 'string') {
+          continue;
+        }
+        if (command.includes(FETCH_SCRIPT)) {
           fetchCalls.add(block['id']);
         }
-      } else if (
-        block['type'] === 'tool_result'
-        && typeof block['tool_use_id'] === 'string'
-        && fetchCalls.has(block['tool_use_id'])
-      ) {
-        // A run that failed printed no review file, and the one before it still counts.
-        reviewFile = parseReviewFile(textOf(block['content'])) ?? reviewFile;
+        if (command.includes(SUBMIT_SCRIPT) && !command.includes('--dry-run')) {
+          submitCalls.add(block['id']);
+        }
+      } else if (block['type'] === 'tool_result' && typeof block['tool_use_id'] === 'string') {
+        const output = textOf(block['content']);
+        if (fetchCalls.has(block['tool_use_id'])) {
+          // A run that failed printed no review file, and the one before it still counts.
+          reviewFile = parseReviewFile(output) ?? reviewFile;
+        }
+        if (submitCalls.has(block['tool_use_id']) && isPosted(output)) {
+          posted = true;
+        }
       }
     }
   }
-  return reviewFile;
+  return { reviewFile, posted };
 };
 
 /**
@@ -148,8 +178,8 @@ const main = (): void => {
     return;
   }
 
-  const reviewFile = findReviewFile(readFileSync(transcriptPath, 'utf8'));
-  const directory = reviewFile === undefined ? undefined : pendingDirectory(reviewFile);
+  const { reviewFile, posted } = readTranscript(readFileSync(transcriptPath, 'utf8'));
+  const directory = reviewFile === undefined || posted ? undefined : pendingDirectory(reviewFile);
   if (reviewFile === undefined || directory === undefined) {
     return;
   }
@@ -165,9 +195,9 @@ const main = (): void => {
   process.stdout.write(`${JSON.stringify({
     decision: 'block',
     reason: [
-      `The review of the pull request has not been posted: ${reviewFile} was handed out by ${FETCH_SCRIPT} and submit-review.ts has not posted it.`,
-      'A report from the code-review or security-review skill is not the end of the pr-reviewer:review skill. Go on from the step you stopped at, in this turn: run the review skill that has not reported yet, then decide what to post (step 4), write the review file (step 5) and post it with submit-review.ts (step 6).',
-      'If the skill itself told you to stop, or the review cannot be posted, say why in one or two sentences and stop.',
+      `This session started a review of a pull request and has not posted it: ${FETCH_SCRIPT} handed out ${reviewFile}, and ${SUBMIT_SCRIPT} has not posted a review. This check runs whenever the turn ends in that state, and cannot tell why it ended.`,
+      'If you are running the pr-reviewer:review skill and ended the turn after the report of the code-review or security-review skill: that report is not the end of the skill. Go on from where you stopped, in this turn: run the review skill that has not run yet, then decide what to post (step 4), write the review file (step 5) and post it with submit-review.ts (step 6).',
+      'Otherwise do not post anything because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If the skill told you to stop (the pull request is not open, the working tree is not the code of the pull request, you need an answer from the user), if the review cannot be posted, or if nobody asked for a review in this session, say why in one sentence and stop.',
     ].join('\n\n'),
   })}\n`);
 };

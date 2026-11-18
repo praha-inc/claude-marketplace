@@ -117,7 +117,7 @@ jobs:
 4. **Triage**: Claude drops duplicates and findings that do not hold up, keeps the ones the pull request introduced, and gives each a severity.
 5. **Post**: The replies, the new inline comments and the verdict go up as one review, so the author gets one notification. The summary of an earlier review is then hidden as outdated, once every thread of that review is resolved. Until then it stays visible, because GitHub hides the comments of a review together with its summary.
 
-The review skills in step 3 end with a report, and a session tends to end its turn there, before anything is posted. The plugin's `Stop` hook guards against that: when a session started a review and ends its turn without posting it, the hook blocks the stop and tells Claude to go on, at most twice for one review. It only acts in a session that ran this skill, and does nothing once the review is posted.
+The review skills in step 3 end with a report, and a session tends to end its turn there, before anything is posted. The plugin's `Stop` hook guards against that: when a session started a review and ends its turn without posting it, the hook blocks the stop and tells Claude to go on, at most three times for one review. It only acts in a session that ran the skill's `fetch-review-state.ts` script, and does nothing more once that session has posted a review.
 
 ### Severity
 
@@ -144,7 +144,8 @@ A thread or summary counts as an earlier review's when this plugin wrote it, as 
 - GitHub does not accept an approval or a request for changes on your own pull request, and some CI tokens may comment but not approve. In both cases the review is posted as a comment whose summary states the verdict.
 - Every finding is a thread on a file the pull request changes, so that it can be replied to and resolved. A finding about code outside the change is placed on the changed line it follows from, or on the changed file most closely related to it, and names the code it is about. A finding on a line that is not part of the diff is posted on the file instead.
 - The review file is written to a temporary directory outside the repository, which the plugin's scripts create and delete.
-- When the skill stops on purpose before posting, for example because the pull request is closed or the working tree has uncommitted changes, the `Stop` hook cannot tell that from a review that was cut short. Claude is asked to go on, says why it stopped, and the session ends after at most two such rounds.
+- When the skill stops on purpose before posting, for example because the pull request is closed or the working tree has uncommitted changes, the `Stop` hook cannot tell that from a review that was cut short. Claude is asked to go on, says why it stopped, and the session ends after at most three such rounds. The same happens while Claude waits for a review skill that runs in the background.
+- The `Stop` hook runs `node` at the end of every turn while the plugin is enabled, also in sessions that do not review anything, where it does nothing.
 
 ## Disabling
 

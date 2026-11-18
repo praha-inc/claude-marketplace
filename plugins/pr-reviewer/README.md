@@ -117,7 +117,7 @@ jobs:
 4. **Triage**: Claude drops duplicates and findings that do not hold up, keeps the ones the pull request introduced, and gives each a severity.
 5. **Post**: The replies, the new inline comments and the verdict go up as one review, so the author gets one notification. The summary of an earlier review is then hidden as outdated, once every thread of that review is resolved. Until then it stays visible, because GitHub hides the comments of a review together with its summary.
 
-The review skills in step 3 end with a report, and a session tends to end its turn there, before anything is posted. The plugin's `Stop` hook guards against that: when a session started a review and ends its turn without posting it, the hook blocks the stop and tells Claude to go on, at most three times for one review. It only acts in a session that ran the skill's `fetch-review-state.ts` script, and does nothing more once that session has posted a review.
+The review skills in step 3 end with a report, and a session tends to end its turn there, before anything is posted. The plugin's `Stop` hook guards against that: when a session started a review and ends its turn without posting it, the hook blocks the stop and tells Claude to go on, at most three times for one review file, of which a review that starts over after new commits gets a new one. It only acts in a session that ran the skill's `fetch-review-state.ts` script, and does nothing more once the review is posted.
 
 ### Severity
 

@@ -18,9 +18,9 @@
  *
  * The hook would rather miss a review that was cut short than push for one that is not
  * wanted, because what it pushes for is posted to the pull request:
- * - Once the session has posted a review, it does nothing more. A directory can be left
- *   over after that (fetch-review-state.ts was run again to look at the result, or the
- *   directory could not be deleted), and blocking then would ask for a second review.
+ * - Once a review is posted, it does nothing more until fetch-review-state.ts hands out
+ *   another review file, even when the directory is still there because it could not be
+ *   deleted. Blocking then would ask for a second review.
  * - A stop that follows a blocked one with no tool use in between goes through: Claude
  *   did not go on, it said why it stopped. So a stop that is meant costs one more round.
  *   Stops that are meant: the working tree has uncommitted changes, a review skill is still
@@ -124,7 +124,8 @@ const isPosted = (output: string): boolean => {
 /**
  * What the session did about a review: the review file that the last run of
  * fetch-review-state.ts handed out (an earlier one was given up when the skill went back
- * to its first step), and whether submit-review.ts posted a review.
+ * to its first step), and whether submit-review.ts posted a review after that. A review
+ * posted before it was another review: the session went on to review again.
  */
 const readTranscript = (transcript: string): { reviewFile: string | null | undefined; posted: boolean } => {
   // The calls of each script by the id of the tool use, which is what its result refers to.
@@ -156,7 +157,10 @@ const readTranscript = (transcript: string): { reviewFile: string | null | undef
         if (fetchCalls.has(block['tool_use_id'])) {
           // A run that failed printed no review file, and the one before it still counts.
           const handedOut = parseReviewFile(output);
-          reviewFile = handedOut === undefined ? reviewFile : handedOut;
+          if (handedOut !== undefined) {
+            reviewFile = handedOut;
+            posted = false;
+          }
         }
         if (submitCalls.has(block['tool_use_id']) && isPosted(output)) {
           posted = true;
@@ -238,7 +242,7 @@ const main = (): void => {
     reason: [
       `This session started a review of a pull request and has not posted it: ${FETCH_SCRIPT} handed out ${reviewFile}, and ${SUBMIT_SCRIPT} has not posted a review. This check runs whenever the turn ends in that state, and cannot tell why it ended.`,
       'If you are running the pr-reviewer:review skill and ended the turn after the report of the code-review or security-review skill: that report is not the end of the skill. Go on from where you stopped, in this turn: run the review skill that has not run yet, then decide what to post (step 4), write the review file (step 5) and post it with submit-review.ts (step 6).',
-      'Otherwise do not post anything because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If the skill told you to stop (the working tree is not the code of the pull request, you need an answer from the user), if the review cannot be posted, or if nobody asked for a review in this session, say why in one sentence and stop.',
+      'Otherwise do not post anything because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If the skill told you to stop (the working tree is not the code of the pull request, you need an answer from the user), if the review cannot be posted, if it was already posted, or if nobody asked for a review in this session, say why in one sentence and stop.',
     ].join('\n\n'),
   })}\n`);
 };

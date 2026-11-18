@@ -21,10 +21,12 @@
  * - Once the session has posted a review, it does nothing more. A directory can be left
  *   over after that (fetch-review-state.ts was run again to look at the result, or the
  *   directory could not be deleted), and blocking then would ask for a second review.
- * - A stop that follows a blocked one directly (`stop_hook_active`) goes through, so a
- *   stop that is meant costs one more round, in which Claude says why. Stops that are
- *   meant: the working tree has uncommitted changes, a review skill is still running in
- *   the background, or the script was run by hand without the skill.
+ * - A stop that follows a blocked one with no tool use in between goes through: Claude
+ *   did not go on, it said why it stopped. So a stop that is meant costs one more round.
+ *   Stops that are meant: the working tree has uncommitted changes, a review skill is still
+ *   running in the background, or the script was run by hand without the skill. When Claude
+ *   did go on and then stops again without posting, such as after the report of the second
+ *   review skill, that stop is blocked like the first.
  * - A stop is blocked at most `MAX_BLOCKS` times for one review file, so a run that keeps
  *   coming back without posting never loops.
  *
@@ -45,12 +47,13 @@ const FETCH_SCRIPT = 'fetch-review-state.ts';
 const SUBMIT_SCRIPT = 'submit-review.ts';
 
 /**
- * A command that runs one of the scripts with node, as the skill does. A command that only
- * names the file, such as `git diff` or `cat` on a pull request that changes it, prints
- * text written by the author of the pull request, and is not read.
+ * A command that runs one of the scripts with node, as the skill does: `node` is the first
+ * word of the command or of one of its parts. A command that only names the file, such as
+ * `git diff`, `cat` or `grep` on a pull request that changes it, prints text written by the
+ * author of the pull request, and is not read.
  */
 const runs = (command: string, script: string): boolean => {
-  return new RegExp(String.raw`\bnode\b[^|;&\n]*${script.replaceAll('.', String.raw`\.`)}`).test(command);
+  return new RegExp(String.raw`(?:^|[;&|(\n])\s*node\s[^|;&\n]*${script.replaceAll('.', String.raw`\.`)}`).test(command);
 };
 
 /**
@@ -181,38 +184,54 @@ const pendingDirectory = (reviewFile: string): string | undefined => {
   return lstatSync(directory, { throwIfNoEntry: false })?.isDirectory() ? directory : undefined;
 };
 
-const readBlocks = (file: string): number => {
+/**
+ * What the hook keeps in the directory of the review file: how many stops it blocked, and
+ * how long the transcript was at the last one, to tell what happened since.
+ */
+const readBlocks = (file: string): { blocks: number; transcriptLength: number } => {
   try {
-    const count = Number(readFileSync(file, 'utf8'));
-    return Number.isInteger(count) && 0 <= count ? count : 0;
+    const [blocks = Number.NaN, transcriptLength = Number.NaN] = readFileSync(file, 'utf8').split(' ').map(Number);
+    if (Number.isInteger(blocks) && 0 <= blocks && Number.isInteger(transcriptLength) && 0 <= transcriptLength) {
+      return { blocks, transcriptLength };
+    }
   } catch {
-    return 0;
+    // Nothing was blocked yet.
   }
+  return { blocks: 0, transcriptLength: 0 };
+};
+
+const hasToolUse = (transcript: string): boolean => {
+  return transcript.split('\n').some((line) => {
+    return line.includes('"tool_use"') && blocksOf(line).some((block) => block['type'] === 'tool_use');
+  });
 };
 
 const main = (): void => {
   const input: unknown = JSON.parse(readFileSync(0, 'utf8'));
-  if (!isRecord(input) || input['stop_hook_active'] === true) {
-    return;
-  }
-  const transcriptPath = input['transcript_path'];
-  if (typeof transcriptPath !== 'string') {
+  const transcriptPath = isRecord(input) ? input['transcript_path'] : undefined;
+  if (!isRecord(input) || typeof transcriptPath !== 'string') {
     return;
   }
 
-  const { reviewFile, posted } = readTranscript(readFileSync(transcriptPath, 'utf8'));
+  const transcript = readFileSync(transcriptPath, 'utf8');
+  const { reviewFile, posted } = readTranscript(transcript);
   const directory = typeof reviewFile !== 'string' || posted ? undefined : pendingDirectory(reviewFile);
   if (typeof reviewFile !== 'string' || directory === undefined) {
     return;
   }
 
   const blocksFile = path.join(directory, STOP_BLOCKS_FILE_NAME);
-  const blocks = readBlocks(blocksFile);
+  const { blocks, transcriptLength } = readBlocks(blocksFile);
   if (MAX_BLOCKS <= blocks) {
     return;
   }
+  // Claude is going on because a stop was blocked, and has used no tool since this hook
+  // blocked one: it answered instead of going on, and asking again would get the same answer.
+  if (input['stop_hook_active'] === true && 0 < blocks && !hasToolUse(transcript.slice(transcriptLength))) {
+    return;
+  }
   // Written before the stop is blocked: if the count cannot be kept, blocking could repeat without end.
-  writeFileSync(blocksFile, String(blocks + 1));
+  writeFileSync(blocksFile, `${blocks + 1} ${transcript.length}`);
 
   process.stdout.write(`${JSON.stringify({
     decision: 'block',

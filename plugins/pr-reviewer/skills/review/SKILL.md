@@ -64,7 +64,7 @@ Run both of these skills on the pull request with the Skill tool, one after the 
 
 Both report their findings back to you. Nothing is posted yet. A skill may run in the background and report later, so wait until both have reported before going on to step 4: a review posted from one of them alone would approve whatever the other was about to find.
 
-The plugin's Stop hook sends you back when the turn ends while the review file of step 1 has not been posted, at most three times for one review file. It cannot tell why the turn ended, so it also does that when you stop on purpose: when steps 1 and 6 tell you to, or to wait for a review skill that runs in the background. Say in one sentence why you stopped, and stop: a stop that follows directly is let through. Do not post a review that is not ready because the hook asked.
+The plugin's Stop hook sends you back when the turn ends while the review file of step 1 has not been posted, at most three times for one review file. It cannot tell why the turn ended, so it also does that when you stop on purpose: when steps 1 and 6 tell you to, or to wait for a review skill that runs in the background. Say in one sentence why you stopped, and stop: a stop that follows with no tool use in between is let through. Do not post a review that is not ready because the hook asked.
 
 If one of the skills is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say in the summary that it was done without the skill.
 

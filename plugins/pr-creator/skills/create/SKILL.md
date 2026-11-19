@@ -177,11 +177,27 @@ Push the branch (`git push -u origin <branch>`) and write the description to a f
 - **Self-review**: how many rounds were run, what they found and fixed in a line each, and the findings judged not valid with their reason, so the reviewer does not raise them again.
 - **Test plan**: the checks that were run and their result, and what was not verified.
 
+### A diagram, where it helps
+
+The description is finished at this point, and most descriptions stay as they are. A diagram is an aid to a description that is already complete, never a part of it and never a requirement.
+
+A reviewer may understand the change faster with one when it alters how parts connect, the order of calls between them, the states something moves through, a schema, or how components are cut, and the description has to walk them through it in prose. A change inside one function or one file has nothing to draw.
+
+When one would help, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show, and that it is to be drawn from the branch's changes against the base branch. Have it write its files next to the description file. It hands back the path of a PNG and an alternative text, or tells you that no diagram helps, which is a result to accept. Then:
+
+- Put `![<alternative text>](./<name>.png)` under the summary. The path is relative to the description file.
+- Leave the text as it was. Everything the diagram shows must still be said in words: the image is not shown everywhere the description is read, and an agent that reviews the pull request reads only the text.
+- Add `--attach <path of the PNG>` to the command below. GitHub CLI uploads the file and points the reference at it.
+
+Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The pull request does not depend on it.
+
 Create it as a draft, with a title and labels in the repository's conventions from step 3:
 
 ```sh
 gh pr create --draft --base <base> --title "<title>" --body-file <file>
 ```
+
+If the upload of a diagram fails, the pull request is created all the same and the command exits with an error, with the URL still printed. Do not create it again. Remove the image from the description with `gh pr edit --body-file <file>`, and say so at the end.
 
 Then confirm the link, because a closing keyword that GitHub did not recognise fails silently:
 
@@ -189,6 +205,6 @@ Then confirm the link, because a closing keyword that GitHub did not recognise f
 gh pr view --json url,isDraft,closingIssuesReferences
 ```
 
-`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, then delete the file.
+`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` again when the description shows a diagram, since the file still holds the local path. Then delete the file, and the files of the diagram with it.
 
 Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified.

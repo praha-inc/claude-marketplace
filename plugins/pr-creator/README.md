@@ -31,7 +31,7 @@ Claude also uses the skill on its own when you ask it to implement something and
 5. **Check against the request and the architecture**: Two agents run in parallel, with no knowledge of Claude's reasoning. The `verifier` reports what is missing from the request, what differs, and what was built without being asked for. The `architect` reports where the change departs from `ARCHITECTURE.md`, or from the structure of the existing code when there is no such document. Claude fixes what they find.
 6. **Self-review**: Claude runs `/code-review` and `/security-review`, judges each finding, fixes the valid ones, and runs both again on the whole change. This repeats until a round finds nothing valid.
 7. **Link the issue**: Claude decides whether merging the pull request finishes the issue.
-8. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue.
+8. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue. Where a picture would let the reviewer understand the change faster, the description shows a diagram drawn with [diagram-writer](../diagram-writer). Most pull requests get none.
 
 ### The two modes
 
@@ -72,10 +72,17 @@ The loop stops without opening a pull request, and Claude reports where things s
 
 GitHub closes issues only from pull requests merged into the default branch. With another base branch, Claude tells you the issue will not close.
 
+### Diagrams
+
+A diagram is an aid to a description that is already complete. Claude writes the description first, and adds a diagram only when the change alters how parts connect, the order of calls, the states something moves through, a schema, or how components are cut. It is drawn from the branch's changes, and attached with `gh pr create --attach`. Everything it shows is also said in the text.
+
+If the `diagram-writer:draw` skill is not available or cannot render, the pull request is opened without a diagram.
+
 ## Notes
 
 - The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to the repository, and Node.js 22.18 or later available as `node`, because its script is a TypeScript file run with Node.js type stripping.
 - When the repository has an `ARCHITECTURE.md`, at the root, under `docs/` or next to the code being changed, Claude implements the change the way it describes. Departing from it counts as a risky decision.
+- The plugin depends on [diagram-writer](../diagram-writer), which is installed with it. Drawing a diagram needs a Chromium-based browser, and attaching one needs a `gh` that has the `--attach` flag. Without them the pull request is still opened, without a diagram.
 - The pull request is always a draft. Mark it ready for review yourself once you have looked at it.
 - Each round of self-review runs both review skills, which start their own subagents, so a change that needs several rounds takes a while.
 - To have the pull request reviewed on GitHub afterwards, see [pr-reviewer](../pr-reviewer).

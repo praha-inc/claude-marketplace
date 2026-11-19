@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Data model</title>
+</head>
+<body>
+<!--
+  Data model: tables or types, their fields, and how they relate.
+
+  .graph            data-arrow="none", because a relation has no direction. data-direction="right"
+                    (default) or "down".
+  .layer            One column (one row when the graph runs down). Put a table and the tables it
+                    refers to in different layers.
+  table.entity      A table or a type, named by data-id for the edges. Its first row is its name,
+                    in a <th colspan="3">. Each row after it is a field with three cells: name,
+                    type, and a marker such as PK, FK or UK (leave the cell empty when there is
+                    none). List the keys and the fields this work is about, not every column.
+  .edge             A relation, from data-from to data-to. data-from-label and data-to-label give
+                    the cardinality at each end: 1, 0..1, N. Its text, if any, names the relation.
+                    Put the edges last in the graph.
+
+  Mark what the work changes with data-change="added", "removed" or "changed" on a table, on a
+  field's <tr>, or on an edge.
+-->
+<main class="diagram">
+  <header>
+    <h1>Orders refer to the coupon they used</h1>
+    <p>A new table for coupons, and a nullable reference from orders.</p>
+  </header>
+  <div class="graph" data-direction="right" data-arrow="none">
+    <div class="layer">
+      <table class="entity" data-id="users">
+        <tr><th colspan="3">users</th></tr>
+        <tr><td>id</td><td>uuid</td><td>PK</td></tr>
+        <tr><td>email</td><td>text</td><td>UK</td></tr>
+      </table>
+    </div>
+    <div class="layer">
+      <table class="entity" data-id="orders">
+        <tr><th colspan="3">orders</th></tr>
+        <tr><td>id</td><td>uuid</td><td>PK</td></tr>
+        <tr><td>user_id</td><td>uuid</td><td>FK</td></tr>
+        <tr data-change="added"><td>coupon_id</td><td>uuid, null</td><td>FK</td></tr>
+        <tr data-change="changed"><td>total</td><td>integer</td><td></td></tr>
+        <tr data-change="removed"><td>discount_code</td><td>text</td><td></td></tr>
+      </table>
+    </div>
+    <div class="layer">
+      <table class="entity" data-id="coupons" data-change="added">
+        <tr><th colspan="3">coupons</th></tr>
+        <tr><td>id</td><td>uuid</td><td>PK</td></tr>
+        <tr><td>code</td><td>text</td><td>UK</td></tr>
+        <tr><td>expires_at</td><td>timestamptz</td><td></td></tr>
+      </table>
+    </div>
+    <div class="edge" data-from="users" data-to="orders" data-from-label="1" data-to-label="N"></div>
+    <div class="edge" data-from="orders" data-to="coupons" data-from-label="N" data-to-label="0..1" data-change="added"></div>
+  </div>
+</main>
+</body>
+</html>

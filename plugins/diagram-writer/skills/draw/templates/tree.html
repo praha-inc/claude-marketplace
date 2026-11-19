@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tree</title>
+</head>
+<body>
+<!--
+  Tree: what contains what, such as components, modules, or files and directories.
+
+  ul.tree           The root list. Add data-kind="files" for files and directories, which are
+                    drawn compactly in a monospaced face.
+  li                An item. It holds a .node and, for its children, another <ul>.
+  .node             The item's box. <strong> is its name, <small> an optional word beside it,
+                    such as the kind of thing it is.
+  li > small        A remark to the right of the box: what the item owns or is responsible for,
+                    such as the state a component holds. Keep it to one line.
+
+  Mark what the work changes with data-change="added", "removed" or "changed" on a .node. Mark
+  what an issue is about, when nothing changes yet, with data-emphasis.
+  Leave out the branches that the work does not touch, and say so in the caption.
+-->
+<main class="diagram">
+  <header>
+    <h1>Components of the checkout page</h1>
+    <p>The coupon form is new, and the summary now owns the discount. Unrelated components are left out.</p>
+  </header>
+  <ul class="tree">
+    <li>
+      <span class="node"><strong>CheckoutPage</strong></span><small>loads the order</small>
+      <ul>
+        <li>
+          <span class="node" data-change="changed"><strong>OrderSummary</strong></span><small>owns: discount</small>
+          <ul>
+            <li><span class="node"><strong>LineItems</strong></span></li>
+            <li>
+              <span class="node" data-change="added"><strong>CouponForm</strong></span><small>owns: code, error</small>
+              <ul>
+                <li><span class="node" data-change="added"><strong>CouponInput</strong></span></li>
+                <li><span class="node" data-change="added"><strong>CouponError</strong></span></li>
+              </ul>
+            </li>
+            <li><span class="node" data-change="removed"><strong>PromoBanner</strong></span></li>
+          </ul>
+        </li>
+        <li><span class="node"><strong>PaymentForm</strong></span></li>
+      </ul>
+    </li>
+  </ul>
+</main>
+</body>
+</html>

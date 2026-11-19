@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>State</title>
+</head>
+<body>
+<!--
+  State: the states something can be in, and what moves it from one to another.
+
+  .graph            data-direction="right" (default) or "down": the way the usual path runs.
+  .layer            One column (one row when the graph runs down). Put the states of the usual
+                    path in layers of their own, in order, and the states that leave that path
+                    in the same layer as the state they leave from, so their lines stay short.
+  .node             A state, named by data-id for the edges. Write it as the value it has in the
+                    code when there is one.
+                    data-shape="start"  the point before the first state (no text)
+                    data-shape="end"    the point after the last state (no text)
+  .edge             A transition, from data-from to data-to. Its text is what causes it: an
+                    event or an action. The same state in both is a transition to itself. An
+                    edge that goes back needs data-from-side and data-to-side (top, right,
+                    bottom or left) to run around the states between. Put the edges last.
+
+  Mark what the work changes with data-change="added", "removed" or "changed" on a node or an edge.
+-->
+<main class="diagram">
+  <header>
+    <h1>States of an order</h1>
+    <p>An order can now be put on hold while a payment is reviewed.</p>
+  </header>
+  <div class="graph" data-direction="right">
+    <div class="layer">
+      <div class="node" data-id="start" data-shape="start"></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="draft"><strong>draft</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="placed"><strong>placed</strong></div>
+      <div class="node" data-id="on_hold" data-change="added"><strong>on_hold</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="paid"><strong>paid</strong></div>
+      <div class="node" data-id="cancelled"><strong>cancelled</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="end" data-shape="end"></div>
+    </div>
+    <div class="edge" data-from="start" data-to="draft"></div>
+    <div class="edge" data-from="draft" data-to="draft">edit</div>
+    <div class="edge" data-from="draft" data-to="placed">submit</div>
+    <div class="edge" data-from="placed" data-to="paid">pay</div>
+    <div class="edge" data-from="placed" data-to="on_hold" data-change="added">flag</div>
+    <div class="edge" data-from="on_hold" data-to="paid" data-change="added">approve</div>
+    <div class="edge" data-from="on_hold" data-to="cancelled" data-change="added">reject</div>
+    <div class="edge" data-from="paid" data-to="end"></div>
+    <div class="edge" data-from="cancelled" data-to="end"></div>
+  </div>
+</main>
+</body>
+</html>

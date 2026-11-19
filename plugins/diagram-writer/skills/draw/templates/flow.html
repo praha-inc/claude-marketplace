@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flow</title>
+</head>
+<body>
+<!--
+  Flow: the steps of a process and where it branches.
+
+  .graph            data-direction="down" for a flow. Add data-lanes="A, B, C" to split it into
+                    swimlanes, one for each actor that does a step.
+  .layer            One row: the steps that happen at the same point of the process. The two
+                    outcomes of a decision go side by side in the layer below it.
+  .node             A step, named by data-id for the edges. Write it as what is done.
+                    data-shape="terminal"  where the process starts or ends
+                    data-shape="decision"  a question; keep it to a few words
+                    With swimlanes, data-lane="2" puts the node in the second lane.
+  .edge             From data-from to data-to. Label the edges that leave a decision with the
+                    answer, and leave the others without text. An edge that goes back up needs
+                    data-from-side and data-to-side (top, right, bottom or left) to run around
+                    the steps between. Put the edges last in the graph.
+
+  Mark what the work changes with data-change="added", "removed" or "changed" on a node or an edge.
+-->
+<main class="diagram">
+  <header>
+    <h1>How a coupon code is handled</h1>
+    <p>The checks an order goes through when a code is entered.</p>
+  </header>
+  <div class="graph" data-direction="down" data-lanes="Web app, Order API, Coupon service">
+    <div class="layer">
+      <div class="node" data-id="enter" data-lane="1" data-shape="terminal"><strong>Code entered</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="request" data-lane="1"><strong>Send the code</strong></div>
+      <div class="node" data-id="load" data-lane="2"><strong>Load the order</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="open" data-lane="2" data-shape="decision"><strong>Order still open?</strong></div>
+      <div class="node" data-id="validate" data-lane="3" data-change="added"><strong>Validate the code</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="error" data-lane="1"><strong>Show the reason</strong></div>
+      <div class="node" data-id="reject" data-lane="2"><strong>Reject</strong></div>
+      <div class="node" data-id="valid" data-lane="3" data-shape="decision" data-change="added"><strong>Valid?</strong></div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="show" data-lane="1" data-shape="terminal"><strong>Show the discount</strong></div>
+      <div class="node" data-id="price" data-lane="2" data-change="changed"><strong>Price the order</strong></div>
+    </div>
+    <div class="edge" data-from="enter" data-to="request"></div>
+    <div class="edge" data-from="request" data-to="load"></div>
+    <div class="edge" data-from="load" data-to="open"></div>
+    <div class="edge" data-from="open" data-to="validate">Yes</div>
+    <div class="edge" data-from="open" data-to="reject">No</div>
+    <div class="edge" data-from="validate" data-to="valid" data-change="added"></div>
+    <div class="edge" data-from="valid" data-to="reject" data-change="added">No</div>
+    <div class="edge" data-from="valid" data-to="price" data-from-side="bottom" data-to-side="right" data-change="added">Yes</div>
+    <div class="edge" data-from="reject" data-to="error"></div>
+    <div class="edge" data-from="price" data-to="show"></div>
+  </div>
+</main>
+</body>
+</html>

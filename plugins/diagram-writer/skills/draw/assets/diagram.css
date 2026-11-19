@@ -1,0 +1,874 @@
+/*
+ * The one stylesheet every diagram is rendered with. render.ts inlines it, and a diagram's
+ * source may not carry styles of its own, so this file is the whole visual design.
+ * The values come from the design system described in references/design-rules.md.
+ */
+
+:root {
+  /* Colour */
+  --color-text: #16191f;
+  --color-text-secondary: #727272;
+  --color-text-on-deep: #ffffff;
+  --color-border: #d3d3d3;
+  --color-line: #727272;
+  --color-surface: #ffffff;
+  --color-surface-gray: #f1f1f1;
+  --color-focus: #0076c0;
+  --color-focus-pale: #e6f1f9;
+  --color-added: #4f7f00;
+  --color-added-pale: #edf2e6;
+  --color-removed: #d10010;
+  --color-removed-pale: #fde6e7;
+  --color-changed: #987021;
+  --color-changed-line: #deb158;
+  --color-changed-pale: #fbf5ea;
+
+  /* Type: a major second scale on a 14px base, line height 1.5 */
+  --font-family: 'Noto Sans JP', 'Noto Sans CJK JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --font-mono: 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
+  --font-size-50: 11.061px;
+  --font-size-75: 12.444px;
+  --font-size-100: 14px;
+  --font-size-300: 17.719px;
+
+  /* Spacing: multiples of 4 */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-xxl: 64px;
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-full: 9999px;
+
+  --line-width: 1.5px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-surface);
+}
+
+body {
+  width: max-content;
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-75);
+  line-height: 1.5;
+  /* Break Japanese between phrases, and keep the lines of a label about the same length. */
+  word-break: auto-phrase;
+  line-break: strict;
+  text-wrap: balance;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------------- Frame */
+
+.diagram {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 880px;
+  padding: var(--space-lg);
+  background: var(--color-surface);
+}
+
+.diagram[data-width='wide'] {
+  width: 1200px;
+}
+
+.diagram > header h1 {
+  margin: 0;
+  font-size: var(--font-size-300);
+  font-weight: 700;
+}
+
+.diagram > header p {
+  margin: var(--space-xxs) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-75);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  margin: 0;
+  padding: var(--space-sm) 0 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-50);
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.legend i {
+  display: block;
+  width: var(--space-md);
+  height: var(--space-sm);
+  border: var(--line-width) solid var(--swatch-line, var(--color-border));
+  border-radius: var(--radius-sm);
+  background: var(--swatch-fill, var(--color-surface));
+}
+
+.legend i[data-swatch='line'] {
+  width: var(--space-lg);
+  height: 0;
+  border-width: var(--line-width) 0 0;
+  border-style: dashed;
+  border-radius: 0;
+  background: none;
+}
+
+/* ------------------------------------------------- Change and emphasis */
+
+/*
+ * Colour carries one meaning only: what this change does to a part. Everything that is not
+ * marked stays neutral, so a marked part stands out without a second colour system.
+ */
+[data-change='added'] {
+  --part-line: var(--color-added);
+  --part-fill: var(--color-added-pale);
+  --part-text: var(--color-text);
+}
+
+[data-change='removed'] {
+  --part-line: var(--color-removed);
+  --part-fill: var(--color-removed-pale);
+  --part-text: var(--color-text-secondary);
+}
+
+[data-change='changed'] {
+  --part-line: var(--color-changed-line);
+  --part-fill: var(--color-changed-pale);
+  --part-text: var(--color-text);
+}
+
+[data-emphasis] {
+  --part-line: var(--color-focus);
+  --part-fill: var(--color-focus-pale);
+  --part-text: var(--color-text);
+}
+
+/* ----------------------------------------------------------------- Node */
+
+.node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  max-width: 200px;
+  min-height: var(--space-xl);
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--line-width) solid var(--part-line, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--part-fill, var(--color-surface));
+  color: var(--part-text, var(--color-text));
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.node strong,
+.actor strong {
+  font-weight: 700;
+}
+
+.node small,
+.actor small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-50);
+}
+
+.node[data-kind='external'] {
+  border-style: dashed;
+  background: var(--part-fill, var(--color-surface-gray));
+}
+
+.node[data-kind='actor'],
+.node[data-shape='terminal'] {
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-full);
+}
+
+/* A data store is drawn as a cylinder: elliptical ends and a rim under the top one. */
+.node[data-kind='store'] {
+  padding-top: var(--space-md);
+  border-radius: 50% / 10px;
+}
+
+.node[data-kind='store']::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--line-width) * -1) calc(var(--line-width) * -1) auto;
+  height: 20px;
+  border: var(--line-width) solid var(--part-line, var(--color-border));
+  border-radius: 50%;
+}
+
+/* A decision is a diamond. The border is the element's own fill showing around the inset. */
+.node[data-shape='decision'] {
+  min-height: var(--space-xxl);
+  padding: var(--space-md) var(--space-xl);
+  border: 0;
+  border-radius: 0;
+  background: var(--part-line, var(--color-border));
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.node[data-shape='decision']::before {
+  content: '';
+  position: absolute;
+  inset: 2px 3px;
+  background: var(--part-fill, var(--color-surface));
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.node[data-shape='decision'] > * {
+  position: relative;
+}
+
+/*
+ * A removed part has a dotted outline, as a removed line is dotted, so that it can be told from
+ * the others without colour. Its name is left as it is: a struck-through name is hard to read.
+ */
+.node[data-change='removed'],
+.node[data-kind='store'][data-change='removed']::before,
+.actor[data-change='removed'],
+.group[data-change='removed'],
+.entity[data-change='removed'],
+.fragment[data-change='removed'] {
+  border-style: dotted;
+}
+
+/* The outline of a diamond is its own fill, so it is broken up with stripes instead. */
+.node[data-shape='decision'][data-change='removed'] {
+  background: repeating-linear-gradient(90deg, var(--part-line) 0 3px, transparent 3px 6px);
+}
+
+/* The start and the end of a state machine. */
+.node[data-shape='start'],
+.node[data-shape='end'] {
+  width: var(--space-md);
+  min-width: 0;
+  height: var(--space-md);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+}
+
+.node[data-shape='end'] {
+  width: var(--space-lg);
+  height: var(--space-lg);
+  border: var(--line-width) solid var(--color-text);
+  background: var(--color-text);
+  box-shadow: inset 0 0 0 3px var(--color-surface);
+}
+
+/* ---------------------------------------------------------------- Graph */
+
+.graph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xxl);
+  width: 100%;
+}
+
+.graph[data-direction='down'] {
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+}
+
+.graph[data-direction='down'] .layer {
+  flex-direction: row;
+  gap: var(--space-xl);
+}
+
+.group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl) var(--space-md) var(--space-md);
+  border: 1px solid var(--part-line, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: var(--part-fill, var(--color-surface-gray));
+}
+
+.graph[data-direction='down'] .group {
+  flex-direction: row;
+  gap: var(--space-xl);
+}
+
+/*
+ * Nothing in a graph shrinks to make room. A graph with too much in it then grows wider than
+ * the diagram, which the layout check reports, instead of squeezing its labels onto many lines.
+ */
+.layer,
+.group,
+.graph .node,
+.entity {
+  flex-shrink: 0;
+}
+
+/* A group that wraps layers runs along the graph instead of across it. */
+.group:has(> .layer) {
+  flex-direction: row;
+  gap: var(--space-xxl);
+}
+
+.graph[data-direction='down'] .group:has(> .layer) {
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* The layout script adds the label, on the side of the group where no line runs through it. */
+.group-label {
+  position: absolute;
+  top: var(--space-xs);
+  left: var(--space-sm);
+  z-index: 1;
+  padding: 0 var(--space-xxs);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-50);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.group-label[data-side='right'] {
+  right: var(--space-sm);
+  left: auto;
+}
+
+.group-label[data-covering] {
+  background: var(--color-surface);
+}
+
+.group .group {
+  background: var(--part-fill, var(--color-surface));
+}
+
+/* Edges are drawn by the layout script into this layer. The .edge element itself becomes the label. */
+.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edges > path {
+  fill: none;
+  stroke: var(--part-line, var(--color-line));
+  stroke-width: var(--line-width);
+}
+
+.edges > path[data-line='dashed'] {
+  stroke-dasharray: 5 4;
+}
+
+.edges > path[data-change='removed'] {
+  stroke-dasharray: 2 3;
+}
+
+.edge,
+.edge-end {
+  position: absolute;
+  z-index: 1;
+  padding: 0 var(--space-xxs);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--part-line, var(--color-text-secondary));
+  font-size: var(--font-size-50);
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.edge:empty {
+  display: none;
+}
+
+.edge[data-change='changed'] {
+  color: var(--color-changed);
+}
+
+.edge-end {
+  padding: 0 2px;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* Swimlanes: every layer becomes a row of the same columns, one column for each lane. */
+.graph[data-lanes] {
+  align-items: stretch;
+  padding-bottom: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.graph[data-lanes] .layer {
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  gap: 0;
+}
+
+.lane-head {
+  z-index: 1;
+  width: 100%;
+  padding: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface-gray);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-50);
+  font-weight: 700;
+  text-align: center;
+}
+
+.lane-head:first-child {
+  border-left: 0;
+  border-top-left-radius: var(--radius-lg);
+}
+
+.lane-head:last-child {
+  border-top-right-radius: var(--radius-lg);
+}
+
+.lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+.lane[data-first] {
+  border-left: 0;
+}
+
+/* ------------------------------------------------------------- Sequence */
+
+.sequence {
+  position: relative;
+  display: grid;
+  row-gap: var(--space-sm);
+  width: 100%;
+}
+
+.actor {
+  z-index: 1;
+  justify-self: center;
+  min-width: 96px;
+  max-width: calc(100% - var(--space-md));
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--line-width) solid var(--part-line, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--part-fill, var(--color-surface));
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.actor[data-kind='actor'] {
+  border-radius: var(--radius-full);
+}
+
+.actor[data-kind='external'] {
+  border-style: dashed;
+  background: var(--part-fill, var(--color-surface-gray));
+}
+
+.lifeline {
+  justify-self: center;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.message {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  min-height: 28px;
+  padding: 0 var(--space-sm) var(--space-xxs);
+  border-bottom: var(--line-width) solid var(--part-line, var(--color-line));
+  color: var(--part-line, var(--color-text));
+  font-size: var(--font-size-50);
+  text-align: center;
+}
+
+.message[data-change='changed'] {
+  color: var(--color-changed);
+}
+
+.message[data-line='dashed'] {
+  border-bottom-style: dashed;
+}
+
+.message span {
+  padding: 0 var(--space-xxs);
+  background: var(--color-surface);
+  box-decoration-break: clone;
+}
+
+/* The arrowhead sits on the line, at the end the message points to. */
+.message::after {
+  content: '';
+  position: absolute;
+  /* Centred on the line, which is the bottom border, below the box this is measured from. */
+  bottom: calc(var(--line-width) / -2 - 4px);
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+}
+
+.message[data-direction='right']::after {
+  right: -1px;
+  border-right-width: 0;
+  border-left: 8px solid var(--part-line, var(--color-line));
+}
+
+.message[data-direction='left']::after {
+  left: -1px;
+  border-left-width: 0;
+  border-right: 8px solid var(--part-line, var(--color-line));
+}
+
+/* A message to oneself is a loop that leaves the lifeline and comes back lower, with its text beside it. */
+.message[data-direction='self'] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: var(--space-xl);
+  padding: 0;
+  border: 0;
+  text-align: left;
+}
+
+.message[data-direction='self'] span {
+  padding: 0;
+  background: none;
+}
+
+.message[data-direction='self']::before {
+  content: '';
+  flex: none;
+  align-self: stretch;
+  width: var(--space-lg);
+  border: var(--line-width) solid var(--part-line, var(--color-line));
+  border-left: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.message[data-direction='self'][data-line='dashed']::before {
+  border-style: dashed;
+}
+
+.message[data-direction='self']::after {
+  /* Here the line is the bottom border of the loop, inside the box. */
+  bottom: calc(var(--line-width) / 2 - 4px);
+  left: -1px;
+  border-left-width: 0;
+  border-right: 8px solid var(--part-line, var(--color-line));
+}
+
+.note {
+  z-index: 1;
+  justify-self: center;
+  max-width: calc(100% - var(--space-md));
+  padding: var(--space-xxs) var(--space-xs);
+  border-radius: var(--radius-md);
+  background: var(--part-fill, var(--color-changed-pale));
+  font-size: var(--font-size-50);
+}
+
+.fragment {
+  position: relative;
+  margin: 0 var(--space-xxs);
+  border: 1px solid var(--part-line, var(--color-border));
+  border-radius: var(--radius-lg);
+}
+
+.fragment::before {
+  content: attr(data-label);
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-lg) 0 var(--radius-md) 0;
+  background: var(--part-line, var(--color-border));
+  color: var(--color-text);
+  font-size: var(--font-size-50);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fragment[data-change='added']::before,
+.fragment[data-change='removed']::before,
+.fragment[data-emphasis]::before {
+  color: var(--color-text-on-deep);
+}
+
+.fragment-head {
+  height: var(--space-md);
+}
+
+.fragment-foot {
+  height: var(--space-xs);
+}
+
+/* ----------------------------------------------------------- Data model */
+
+.entity {
+  min-width: 160px;
+  border: var(--line-width) solid var(--part-line, var(--color-border));
+  border-radius: var(--radius-lg);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--color-surface);
+  font-size: var(--font-size-50);
+  overflow: hidden;
+}
+
+.entity th {
+  padding: var(--space-xxs) var(--space-xs);
+  background: var(--part-fill, var(--color-surface-gray));
+  font-size: var(--font-size-75);
+  font-weight: 700;
+  text-align: left;
+}
+
+.entity td {
+  padding: 3px var(--space-xs);
+  border-top: 1px solid var(--color-border);
+  background: var(--part-fill, transparent);
+  color: var(--part-text, var(--color-text));
+  white-space: nowrap;
+}
+
+.entity td:nth-child(1) {
+  font-family: var(--font-mono);
+}
+
+.entity td:nth-child(2) {
+  color: var(--color-text-secondary);
+}
+
+.entity td:nth-child(3) {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  text-align: right;
+}
+
+.entity tr[data-change] td:first-child {
+  box-shadow: inset 3px 0 0 var(--part-line);
+}
+
+/*
+ * A changed field also carries the sign a diff would give it, so that it can be told from the
+ * others without colour. Every field of the table is indented by the width of the sign, to keep
+ * the names in one column.
+ */
+.entity:has(tr[data-change]) td:first-child::before {
+  content: '';
+  display: inline-block;
+  width: var(--space-sm);
+  color: var(--part-line);
+  font-weight: 700;
+}
+
+.entity tr[data-change='added'] td:first-child::before {
+  content: '+';
+}
+
+.entity tr[data-change='removed'] td:first-child::before {
+  content: '−';
+}
+
+.entity tr[data-change='changed'] td:first-child::before {
+  content: '~';
+  color: var(--color-changed);
+}
+
+/* ----------------------------------------------------------------- Tree */
+
+.tree,
+.tree ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tree {
+  width: 100%;
+}
+
+.tree ul {
+  margin-left: var(--space-md);
+}
+
+.tree li {
+  position: relative;
+  padding: var(--space-xs) 0 0 var(--space-lg);
+}
+
+.tree > li {
+  padding-left: 0;
+}
+
+/* Each item draws the branch that reaches it; the last one stops at its own row. */
+.tree ul > li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: var(--line-width) solid var(--color-border);
+}
+
+.tree ul > li:last-child::before {
+  bottom: auto;
+  height: calc(var(--space-xs) + 15px);
+}
+
+.tree ul > li::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--space-xs) + 14px);
+  left: 0;
+  width: var(--space-lg);
+  border-top: var(--line-width) solid var(--color-border);
+}
+
+.tree .node {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-width: 0;
+  max-width: none;
+  min-height: 30px;
+  padding: var(--space-xxs) var(--space-sm);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tree .node small {
+  display: inline;
+}
+
+/* What an item owns or does, set to the right of its box. */
+.tree li > small {
+  margin-left: var(--space-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-50);
+}
+
+.tree[data-kind='files'] .node {
+  border-color: var(--part-line, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-50);
+}
+
+.tree[data-kind='files'] .node,
+.tree[data-kind='files'] li {
+  min-height: 0;
+}
+
+.tree[data-kind='files'] li {
+  padding-top: 2px;
+}
+
+.tree[data-kind='files'] ul > li:last-child::before {
+  height: 15px;
+}
+
+.tree[data-kind='files'] ul > li::after {
+  top: 14px;
+}
+
+.tree[data-kind='files'] .node {
+  min-height: 24px;
+  padding-block: 2px;
+}
+
+/* -------------------------------------------------------------- Compare */
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  align-items: stretch;
+}
+
+.compare[data-layout='rows'] {
+  grid-template-columns: 1fr;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.pane::before {
+  content: attr(data-label);
+  align-self: flex-start;
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-gray);
+  color: var(--color-text);
+  font-size: var(--font-size-50);
+  font-weight: 700;
+}
+
+.pane:last-child::before {
+  background: var(--color-focus);
+  color: var(--color-text-on-deep);
+}
+
+.pane > * {
+  margin-block: auto;
+}
+
+.pane .graph {
+  gap: var(--space-xl);
+}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Comparison</title>
+</head>
+<body>
+<!--
+  Comparison: the same thing before and after the work, side by side. It is a frame, not a kind
+  of diagram: each pane holds a graph, a tree or a sequence written as in that kind's template.
+
+  .compare          Two panes next to each other. data-layout="rows" puts one above the other,
+                    for content that is too wide to halve.
+  .pane             One side, named by data-label: "Before" and "After", or "Current" and
+                    "Proposed" in an issue. The first pane is how things are, the second how they
+                    will be.
+
+  Draw both panes the same way: the same parts in the same layers and the same order, so the eye
+  finds the difference by position. In the first pane mark what goes away with
+  data-change="removed". In the second mark what is new with data-change="added" and what is
+  different with data-change="changed". The data-id of a part may be the same in both panes.
+
+  Use data-width="wide" on .diagram when each pane needs more than three layers.
+-->
+<main class="diagram">
+  <header>
+    <h1>The order API no longer validates coupons itself</h1>
+    <p>Validation moves out of the order API into a service of its own.</p>
+  </header>
+  <div class="compare">
+    <section class="pane" data-label="Before">
+      <div class="graph" data-direction="down">
+        <div class="layer">
+          <div class="node" data-id="web" data-kind="actor"><strong>Web app</strong></div>
+        </div>
+        <div class="layer">
+          <div class="group" data-label="Order API">
+            <div class="node" data-id="pricing"><strong>Pricing</strong></div>
+            <div class="node" data-id="coupons" data-change="removed"><strong>Coupon rules</strong></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="node" data-id="db" data-kind="store"><strong>Orders DB</strong></div>
+        </div>
+        <div class="edge" data-from="web" data-to="pricing"></div>
+        <div class="edge" data-from="pricing" data-to="coupons" data-change="removed"></div>
+        <div class="edge" data-from="pricing" data-to="db"></div>
+      </div>
+    </section>
+    <section class="pane" data-label="After">
+      <div class="graph" data-direction="down">
+        <div class="layer">
+          <div class="node" data-id="web" data-kind="actor"><strong>Web app</strong></div>
+        </div>
+        <div class="layer">
+          <div class="group" data-label="Order API">
+            <div class="node" data-id="pricing" data-change="changed"><strong>Pricing</strong></div>
+          </div>
+          <div class="group" data-label="Coupon service" data-change="added">
+            <div class="node" data-id="coupons" data-change="added"><strong>Coupon rules</strong></div>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="node" data-id="db" data-kind="store"><strong>Orders DB</strong></div>
+          <div class="node" data-id="coupon_db" data-kind="store" data-change="added"><strong>Coupons DB</strong></div>
+        </div>
+        <div class="edge" data-from="web" data-to="pricing"></div>
+        <div class="edge" data-from="pricing" data-to="coupons" data-change="added">gRPC</div>
+        <div class="edge" data-from="pricing" data-to="db"></div>
+        <div class="edge" data-from="coupons" data-to="coupon_db" data-change="added"></div>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

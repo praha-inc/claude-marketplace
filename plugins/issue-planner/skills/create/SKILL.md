@@ -120,15 +120,29 @@ Check the structure of the draft:
 node "${CLAUDE_SKILL_DIR}/scripts/create-issues.ts" --dry-run .claude/issue-drafts/<short-slug>.md
 ```
 
+### A diagram, where it helps
+
+The draft is finished at this point, and most drafts stay as they are. A diagram is an aid to a body that is already complete, never a part of it and never a requirement.
+
+Read the draft once more as someone who has not seen the code. If there is a place where they would have to assemble a picture from the prose, a diagram may save them the work: how the parts involved connect today and how they will after, a flow that crosses services or repositories, the states something moves through. That is nearly always in the parent issue. A sub-issue that describes one pull request rarely needs one, and the order of the sub-issues never does, since GitHub shows it.
+
+When one would help, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show and which part of the draft it illustrates, and have it write its files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.html`. It hands back the path of a PNG and an alternative text, or tells you that no diagram helps, which is a result to accept, not to argue with. Then:
+
+- Put `![<alternative text>](./<short-slug>-<name>.png)` in the body, next to the text it illustrates.
+- Leave the text as it was. Everything the diagram shows must still be said in words: the person or agent who picks up the issue may read only the text, and a body that says "see the diagram" has lost what it was meant to say.
+- Run the dry run again. It checks that every image a body shows is a file next to the draft.
+
+Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The issue does not depend on it.
+
 ## 7. Have the draft reviewed
 
 Start the `issue-planner:reviewer` agent and give it only the path of the draft. Do not tell it what the user asked for, what you investigated, or what you think of the draft. It reads the draft the way the eventual implementer will, with none of this conversation, so whatever it cannot work out is something the issue fails to say. Context from you would hide exactly those gaps.
 
-Fix the blocking problems it reports. If fixing one needs an answer from the user or more investigation, go back to the step it belongs to. After changes that alter the scope, the split or the dependencies, run the review again on the new draft. Use your judgment on its suggested improvements, and carry any question you cannot settle into step 8.
+Fix the blocking problems it reports. If fixing one needs an answer from the user or more investigation, go back to the step it belongs to. When a change to the draft makes a diagram say something the text no longer says, draw it again with `diagram-writer:draw` or take it out. After changes that alter the scope, the split or the dependencies, run the review again on the new draft. Use your judgment on its suggested improvements, and carry any question you cannot settle into step 8.
 
 ## 8. Ask the user to review
 
-Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 7.
+Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. If the draft has a diagram, give the path of its PNG as well, so they can look at it. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 7.
 
 ## 9. Find a GitHub Project
 
@@ -152,4 +166,6 @@ node "${CLAUDE_SKILL_DIR}/scripts/create-issues.ts" .claude/issue-drafts/<short-
 
 The script creates the parent issue and the sub-issues in order, links each sub-issue to the parent, registers the `Blocked by:` dependencies, and adds every issue to the project. It records each created issue in the draft as a `URL:` line under its heading. If it fails partway, fix the cause and run the same command again: issues that already have a `URL:` line are not created twice, and links that already exist are skipped.
 
-Finish by giving the user the URL of the parent issue and of each sub-issue, and mention anything that did not succeed. Then delete the draft file, unless the user wants to keep it, since its content now lives on GitHub.
+An image a body shows is uploaded with its issue. That needs push access to the repository of the issue, which creating an issue alone does not. When an upload fails, the issue is created all the same, with a body that still shows the local path, and the script says so. Remove the image from the body of that issue with `gh issue edit`, and tell the user: the issue is complete without it.
+
+Finish by giving the user the URL of the parent issue and of each sub-issue, and mention anything that did not succeed. Then delete the draft file and the files of its diagrams, unless the user wants to keep them, since their content now lives on GitHub.

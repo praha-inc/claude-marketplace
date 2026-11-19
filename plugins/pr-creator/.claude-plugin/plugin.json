@@ -4,5 +4,8 @@
   "author": {
     "name": "PrAha, Inc.",
     "url": "https://praha-inc.com"
-  }
+  },
+  "dependencies": [
+    "diagram-writer"
+  ]
 }

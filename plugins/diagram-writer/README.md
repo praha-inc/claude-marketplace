@@ -20,7 +20,7 @@ Run the skill with what the diagram should show:
 /diagram-writer:draw What this branch changes in the checkout components
 ```
 
-Claude also uses the skill on its own when an issue or a pull request it is writing would be clearer with a picture, and when you ask it to draw or visualize something.
+Claude also uses the skill on its own when an issue or a pull request it is writing would be clearer with a picture, and when you ask it to draw or visualize something. [issue-planner](../issue-planner) and [pr-creator](../pr-creator) call it for the issues and pull requests they write, when a diagram would help.
 
 ## Templates
 

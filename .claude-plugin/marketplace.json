@@ -11,6 +11,10 @@
       "source": "./plugins/commit-hook"
     },
     {
+      "name": "diagram-writer",
+      "source": "./plugins/diagram-writer"
+    },
+    {
       "name": "issue-planner",
       "source": "./plugins/issue-planner"
     },

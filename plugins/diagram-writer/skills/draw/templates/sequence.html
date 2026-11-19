@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sequence</title>
+</head>
+<body>
+<!--
+  Sequence: who sends what to whom, in order from top to bottom.
+
+  .sequence         Holds the actors first, then the steps in the order they happen.
+  .actor            A participant, named by data-id. At most six fit. data-kind="actor" for a
+                    person or a client, data-kind="external" for a system outside the repository.
+  .message          From data-from to data-to. Its text is the label: the call, the event or the
+                    result. data-line="dashed" for a reply or an asynchronous message, whichever
+                    data-legend-dashed on .diagram says. The same actor in both is a call to itself.
+  .note             A remark over the actor named in data-over, or over several: "api,db".
+  .fragment         A frame around steps that only happen sometimes or happen repeatedly.
+                    data-label says when, such as "alt: the code has expired" or "loop: each item".
+                    It holds messages, notes and other fragments.
+
+  Mark what the work changes with data-change="added", "removed" or "changed" on an actor, a
+  message or a fragment.
+-->
+<main class="diagram" data-legend-dashed="Reply">
+  <header>
+    <h1>Applying a coupon to an order</h1>
+    <p>The order API validates the code before it prices the order.</p>
+  </header>
+  <div class="sequence">
+    <div class="actor" data-id="user" data-kind="actor"><strong>User</strong></div>
+    <div class="actor" data-id="web"><strong>Web app</strong></div>
+    <div class="actor" data-id="orders"><strong>Order API</strong></div>
+    <div class="actor" data-id="coupons" data-change="added"><strong>Coupon service</strong></div>
+
+    <div class="message" data-from="user" data-to="web">Enters a code</div>
+    <div class="message" data-from="web" data-to="orders">POST /orders/42/coupon</div>
+    <div class="message" data-from="orders" data-to="coupons" data-change="added">Validate(code)</div>
+    <div class="message" data-from="coupons" data-to="coupons" data-change="added">Check expiry and usage</div>
+    <div class="fragment" data-label="alt: the code is not valid" data-change="added">
+      <div class="message" data-from="coupons" data-to="orders" data-line="dashed" data-change="added">Rejected(reason)</div>
+      <div class="message" data-from="orders" data-to="web" data-line="dashed" data-change="added">422 with the reason</div>
+    </div>
+    <div class="message" data-from="coupons" data-to="orders" data-line="dashed" data-change="added">Discount</div>
+    <div class="note" data-over="orders">Prices the order again</div>
+    <div class="message" data-from="orders" data-to="web" data-line="dashed">200 with the new total</div>
+    <div class="message" data-from="web" data-to="user" data-line="dashed">Shows the discount</div>
+  </div>
+</main>
+</body>
+</html>

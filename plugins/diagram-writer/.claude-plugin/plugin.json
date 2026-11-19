@@ -1,0 +1,8 @@
+{
+  "name": "diagram-writer",
+  "description": "Draws diagrams for GitHub issues and pull requests as PNG images, from templates that share one design: architecture, sequence, flow, state, data model, tree, and a before-and-after comparison.",
+  "author": {
+    "name": "PrAha, Inc.",
+    "url": "https://praha-inc.com"
+  }
+}

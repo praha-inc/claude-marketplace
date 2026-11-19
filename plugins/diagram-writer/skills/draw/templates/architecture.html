@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Architecture</title>
+</head>
+<body>
+<!--
+  Architecture: the parts of a system, the boundaries they sit in, and which part depends on which.
+
+  .graph            data-direction="right" (default) or "down": the way dependencies run.
+  .layer            One column of the graph (one row when it runs down). Put parts that sit at
+                    the same depth in the same layer. Lines are drawn between layers, so a part
+                    and what it calls belong in different layers.
+  .group            A boundary, such as a service, a package or a repository, named by data-label.
+                    It holds nodes, or whole layers when the boundary spans several of them.
+  .node             A part. data-id names it for the edges. <strong> is its name, <small> an
+                    optional line such as its technology or role.
+                    data-kind="actor"    a person or a client that starts things
+                    data-kind="store"    a database, a queue, a bucket
+                    data-kind="external" a system outside what this repository owns
+  .edge             A dependency, from data-from to data-to. Its text is the label: a few words,
+                    or nothing. data-line="dashed" for the second kind of line, whose meaning is
+                    given once in data-legend-dashed on .diagram. data-arrow="both" or "none".
+                    Put the edges last in the graph.
+
+  Mark what the work changes with data-change="added", "removed" or "changed" on a node, a group
+  or an edge. Mark what an issue is about, when nothing changes yet, with data-emphasis.
+-->
+<main class="diagram" data-legend-dashed="Asynchronous">
+  <header>
+    <h1>Coupons are checked by a new service</h1>
+    <p>The order API asks the coupon service before it prices an order.</p>
+  </header>
+  <div class="graph" data-direction="right">
+    <div class="layer">
+      <div class="node" data-id="web" data-kind="actor"><strong>Web app</strong></div>
+    </div>
+    <div class="layer">
+      <div class="group" data-label="Backend">
+        <div class="node" data-id="orders" data-change="changed"><strong>Order API</strong><small>Prices the order</small></div>
+        <div class="node" data-id="coupons" data-change="added"><strong>Coupon service</strong><small>Validates a code</small></div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="node" data-id="db" data-kind="store"><strong>Orders DB</strong></div>
+      <div class="node" data-id="payment" data-kind="external"><strong>Payment provider</strong></div>
+      <div class="node" data-id="queue" data-kind="store"><strong>Event queue</strong></div>
+    </div>
+    <div class="edge" data-from="web" data-to="orders">REST</div>
+    <div class="edge" data-from="orders" data-to="coupons" data-change="added">gRPC</div>
+    <div class="edge" data-from="orders" data-to="db"></div>
+    <div class="edge" data-from="orders" data-to="payment"></div>
+    <div class="edge" data-from="coupons" data-to="queue" data-line="dashed" data-change="added">used</div>
+  </div>
+</main>
+</body>
+</html>

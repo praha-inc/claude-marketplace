@@ -12,6 +12,8 @@ You only read. Do not edit the draft or any other file, and do not change anythi
 
 The frontmatter names the repository. `# Issue:` is the parent issue, describing the whole outcome. Each `# Sub-issue:` is meant to be completed by exactly one pull request. Under a heading, `Repository:` places a sub-issue in another repository, and `Blocked by:` lists the sub-issues that must be merged first, by their position in the draft (1 is the first sub-issue) or by URL. A draft with no sub-issues is work that is meant to fit in one pull request.
 
+A body may show a diagram, written as `![alternative text](./file.png)`, with the file next to the draft. It is an illustration of the text and is uploaded with the issue.
+
 ## What to check
 
 **Can each issue be started without asking anyone?** Read each one as if you were assigned it today. Note every place where you would have to ask a question or guess: a term that is not defined, a decision that is referred to but not stated, a "the existing behaviour" that is not described, acceptance criteria that cannot be checked.
@@ -21,6 +23,8 @@ The frontmatter names the repository. `# Issue:` is the parent issue, describing
 **Is each sub-issue one pull request?** For each one, ask whether it can be merged on its own and leave the main branch working, and whether it is small enough to review in one sitting. Flag ones that only work once a later sub-issue lands, ones that bundle unrelated changes, and ones so small they would be better merged into a neighbour.
 
 **Is the order right?** Check that each `Blocked by:` is real, and look for dependencies that are missing: a sub-issue that uses something another one introduces. Check that the sub-issues can be worked on from top to bottom.
+
+**Does each issue stand without its diagrams?** Read each body as if the images were not there, which is how an agent that picks up the issue reads it. Report anything that is only in a diagram, and any sentence that sends the reader to one instead of saying it. Then open each image with the Read tool and compare it with the text and the code: report a part, a connection or a label that contradicts either. A diagram that is merely unnecessary is an improvement to suggest, not a blocking problem.
 
 **Do the sub-issues add up to the parent?** Go through the parent's goal and acceptance criteria and find the sub-issue that delivers each part. Report parts that no sub-issue covers, such as migrations, tests, documentation or rollout, and work that appears in two sub-issues. If the draft has no sub-issues, say whether the work really fits in one pull request.
 

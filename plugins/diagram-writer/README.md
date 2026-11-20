@@ -42,7 +42,7 @@ Each of them can mark what the work adds, removes and changes. The marks use the
 2. **Choose**: Claude picks the template by the question the reader has, such as "who calls whom, in what order?".
 3. **Write**: Claude copies the template and replaces its content. The source only says what the parts are and what connects to what.
 4. **Render**: `render.ts` adds the stylesheet and the layout script, lays the page out in a headless browser, and takes a screenshot at twice the size.
-5. **Look**: Claude opens the PNG, fixes what does not read well, and renders again, for at most three rounds.
+5. **Look**: Claude opens the PNG, fixes what does not read well, and renders again, looking at no more than three images.
 6. **Hand back**: Claude returns the path of the PNG with an alternative text. The image is attached with `gh issue create --attach` or `gh pr create --attach`.
 
 ### What keeps the design the same
@@ -61,7 +61,7 @@ The layout script reports what it can measure, and Claude fixes it before lookin
 - A label that covers a box or another label.
 - Text that does not fit its box.
 - Content that is wider than the diagram.
-- A line whose end does not exist, a dashed line whose meaning is not given, and values that are not allowed. For these, no image is produced.
+- A line whose end does not exist, a dashed line whose meaning is not given, two boxes in one lane of one layer, and values that are not allowed. For these, no image is produced.
 
 ### Nothing is fetched or run
 

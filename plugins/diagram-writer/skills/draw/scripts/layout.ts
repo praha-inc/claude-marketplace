@@ -509,12 +509,18 @@ export const layout = (): void => {
     for (const layer of graph.querySelectorAll<HTMLElement>(':scope > .layer')) {
       layer.style.gridTemplateColumns = `repeat(${names.length}, minmax(0, 1fr))`;
       if (layer === head) continue;
+      const taken = new Set<number>();
       for (const node of childrenOf(layer)) {
         const lane = Number(data(node, 'lane'));
         if (!Number.isInteger(lane) || lane < 1 || names.length < lane) {
           errors.push(`${describe(node)} needs a data-lane from 1 to ${names.length}, the position of its lane in data-lanes.`);
           continue;
         }
+        if (taken.has(lane)) {
+          errors.push(`${describe(node)} is the second box of lane ${lane} in its layer, and a lane holds one box in a layer. Put it in a layer of its own, or draw the flow without lanes.`);
+          continue;
+        }
+        taken.add(lane);
         node.style.gridColumn = String(lane);
         node.style.gridRow = '1';
       }
@@ -562,6 +568,20 @@ export const layout = (): void => {
       graph.style.columnGap = `${gap}px`;
       for (const group of graph.querySelectorAll<HTMLElement>('.group')) {
         if (group.querySelector(':scope > .layer')) group.style.columnGap = `${gap}px`;
+      }
+    } else if (!data(graph, 'lanes')) {
+      // In a graph that runs down, the label of a line between two boxes of one layer lies in the
+      // gap between them. The gap has to hold the label and leave the line and its arrow visible.
+      const gaps = new Map<HTMLElement, number>();
+      for (const edge of edges) {
+        const row = edge.fromElement.closest<HTMLElement>('.layer');
+        if (!row || edge.fromElement === edge.toElement || row !== edge.toElement.closest('.layer')) continue;
+        if (textOf(edge.element).length === 0) continue;
+        const gap = Math.ceil((edge.element.getBoundingClientRect().width + 40) / 8) * 8;
+        gaps.set(row, Math.max(gaps.get(row) ?? 0, gap));
+      }
+      for (const [row, gap] of gaps) {
+        if (Number.parseFloat(getComputedStyle(row).columnGap) < gap) row.style.columnGap = `${gap}px`;
       }
     }
 

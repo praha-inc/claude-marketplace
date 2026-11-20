@@ -179,9 +179,9 @@ Push the branch (`git push -u origin <branch>`) and write the description to a f
 
 ### A diagram, where it helps
 
-The description is finished at this point, and most descriptions stay as they are. A diagram is an aid to a description that is already complete, never a part of it and never a requirement.
+The description is finished at this point. A diagram is an aid to a description that is already complete, never a part of it and never a requirement: a description without one is missing nothing.
 
-A reviewer may understand the change faster with one when it alters how parts connect, the order of calls between them, the states something moves through, a schema, or how components are cut, and the description has to walk them through it in prose. A change inside one function or one file has nothing to draw.
+A reviewer may understand the change faster with one when it alters how parts connect, the order of calls between them, the states something moves through, a schema, or how components are cut, and the description has to walk them through it in prose. The clearest sign is a path that the change spreads over three or more places, such as a screen, an API and a domain module, so that no single file of the diff shows where it branches and where it ends up. A change inside one function or one file has nothing to draw.
 
 When one would help, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show, and that it is to be drawn from the branch's changes against the base branch. Have it write its files next to the description file. It hands back the path of a PNG and an alternative text, or tells you that no diagram helps, which is a result to accept. Then:
 
@@ -207,4 +207,4 @@ gh pr view --json url,isDraft,closingIssuesReferences
 
 `closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` again when the description shows a diagram, since the file still holds the local path. Then delete the file, and the files of the diagram with it.
 
-Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified.
+Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified. Say in one line whether the description shows a diagram, and when it does not, what you considered drawing, so they can ask for it.

@@ -122,14 +122,18 @@ node "${CLAUDE_SKILL_DIR}/scripts/create-issues.ts" --dry-run .claude/issue-draf
 
 ### A diagram, where it helps
 
-The draft is finished at this point, and most drafts stay as they are. A diagram is an aid to a body that is already complete, never a part of it and never a requirement.
+The draft is finished at this point. A diagram is an aid to a body that is already complete, never a part of it and never a requirement: a draft without one is missing nothing.
 
-Read the draft once more as someone who has not seen the code. If there is a place where they would have to assemble a picture from the prose, a diagram may save them the work: how the parts involved connect today and how they will after, a flow that crosses services or repositories, the states something moves through. That is nearly always in the parent issue. A sub-issue that describes one pull request rarely needs one, and the order of the sub-issues never does, since GitHub shows it.
+Read the draft once more as someone who has not seen the code. If there is a place where they would have to assemble a picture from the prose, a diagram may save them the work: how the parts involved connect today and how they will after, a flow that crosses services or repositories, the states something moves through.
+
+In a draft with sub-issues, the clearest sign is one behaviour that is told across three or more of them, so that the reader of any single one cannot see the whole path: a branch that one sub-issue decides, another acts on, and a third falls back from. Each sub-issue is complete on its own and still nobody is shown how they meet. A sub-issue that stays inside one module usually has nothing to draw, and the order of the sub-issues never needs a diagram, since GitHub shows it.
+
+A diagram goes in the body whose text it illustrates, so one that shows how the sub-issues meet goes in the parent issue. When the parent issue already exists and the draft does not write its body, do not move that diagram into a sub-issue. Tell the user in step 8 what it would show, and add it to the parent only when they ask for it.
 
 When one would help, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show and which part of the draft it illustrates, and have it write its files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.html`. It hands back the path of a PNG and an alternative text, or tells you that no diagram helps, which is a result to accept, not to argue with. Then:
 
 - Put `![<alternative text>](./<short-slug>-<name>.png)` in the body, next to the text it illustrates.
-- Leave the text as it was. Everything the diagram shows must still be said in words: the person or agent who picks up the issue may read only the text, and a body that says "see the diagram" has lost what it was meant to say.
+- Leave the text as it was. Everything the diagram shows must still be said in words: the person or agent who picks up the issue may read only the text, and a body that says "see the diagram" has lost what it was meant to say. When the diagram brings together what several sub-issues say, the body it goes in may not say it yet: write those few sentences next to the image.
 - Run the dry run again. It checks that every image a body shows is a file next to the draft.
 
 Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The issue does not depend on it.
@@ -142,7 +146,7 @@ Fix the blocking problems it reports. If fixing one needs an answer from the use
 
 ## 8. Ask the user to review
 
-Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. If the draft has a diagram, give the path of its PNG as well, so they can look at it. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 7.
+Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. Say in one line whether the draft has a diagram: the path of its PNG, so they can look at it, or that it has none and what you considered drawing, so they can ask for it. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 7.
 
 ## 9. Find a GitHub Project
 

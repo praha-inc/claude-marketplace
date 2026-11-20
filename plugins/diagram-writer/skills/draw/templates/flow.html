@@ -15,9 +15,15 @@
   .node             A step, named by data-id for the edges. Write it as what is done.
                     data-shape="terminal"  where the process starts or ends
                     data-shape="decision"  a question; keep it to a few words
-                    With swimlanes, data-lane="2" puts the node in the second lane.
+                    With swimlanes, data-lane="2" puts the node in the second lane. A lane
+                    holds one node in a layer: when a decision and both of its outcomes belong
+                    to one actor, draw the flow without lanes.
+                    <small> is an optional second line, such as where the step happens in a
+                    flow without lanes.
   .edge             From data-from to data-to. Label the edges that leave a decision with the
-                    answer, and leave the others without text. An edge that goes back up needs
+                    answer, and leave the others without text. When a step can fail over to another
+                    step, draw the condition as a decision instead of a sentence on the edge.
+                    An edge that goes back up needs
                     data-from-side and data-to-side (top, right, bottom or left) to run around
                     the steps between. Put the edges last in the graph.
 

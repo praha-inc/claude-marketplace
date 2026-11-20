@@ -88,7 +88,7 @@ Open the PNG with the Read tool. The layout check cannot see everything, and you
 
 Fix what you find in the source and render again. The usual fixes are fewer parts, shorter labels, a different order within a layer, and `data-direction="down"` for a graph that is too wide. Use `data-width="wide"` last: GitHub shows a wide diagram scaled down, so its text gets smaller.
 
-Stop after three rounds. If the diagram still does not read well, it is trying to show too much: cut it down to the point of the title, and if that cannot be done, hand back no diagram and say why.
+Stop after looking at three images. A render that only reports problems is not one of them: fix what it reports and render again. If the diagram still does not read well after the third look, it is trying to show too much: cut it down to the point of the title, and if that cannot be done, hand back no diagram and say why.
 
 ## 6. Hand back
 

@@ -51,7 +51,7 @@ Japanese text breaks between phrases, and the lines of a label are balanced in l
 |-------|-------|----------|
 | xxs, xs, sm | 4, 8, 12px | Inside boxes and between a box and its remark |
 | md | 16px | Inside groups and panes, between panes |
-| lg | 24px | Around the diagram, between boxes in a layer |
+| lg | 24px | Around the diagram, between boxes in a layer, wider when a line between two of them carries a label |
 | xl | 40px | Between the layers of a graph that runs down |
 | xxl | 64px | Between the layers of a graph that runs right, wider when a label needs it |
 

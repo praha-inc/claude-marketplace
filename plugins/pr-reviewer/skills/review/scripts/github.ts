@@ -32,6 +32,23 @@ export type OpenThread = {
   omittedComments: number;
 };
 
+export type ResolvedThread = {
+  url: string;
+  path: string;
+  /** The line the thread is attached to, or null when that line is no longer part of the diff. */
+  line: number | null;
+  /** The line the thread was left on, in the version of the file that was reviewed then. */
+  originalLine: number | null;
+  /** Whether the code the thread was left on has changed since. */
+  isOutdated: boolean;
+  /** The severity of the original finding, or null when the comment does not carry one. */
+  severity: Severity | null;
+  /** The finding followed by its newest replies, which are the ones that show how the thread ended. */
+  comments: { author: string; createdAt: string; body: string }[];
+  /** How many replies between the finding and the newest ones were left out. */
+  omittedComments: number;
+};
+
 export type PreviousSummary = {
   id: string;
   url: string;
@@ -64,6 +81,7 @@ export type ReviewState = {
   changedFiles: string[];
   /** Unresolved threads started by an earlier review, each of which the next review must answer. */
   openThreads: OpenThread[];
+  /** How many threads `resolvedThreads` holds, said early so that a list that was cut off can be told from a complete one. */
   resolvedThreadCount: number;
   /**
    * Summaries of earlier reviews that are still visible. GitHub hides the comments of a review
@@ -81,6 +99,12 @@ export type ReviewState = {
    * are left alone, as an approval would leave them.
    */
   changesRequested: { id: string; url: string }[];
+  /**
+   * Resolved threads started by an earlier review: what was already raised and settled, which
+   * the next review must not raise again. Last, because it is the longest part and the one a
+   * review can best do without when a long output is cut off.
+   */
+  resolvedThreads: ResolvedThread[];
 };
 
 export const SEVERITIES: Record<Severity, { emoji: string; label: string }> = {
@@ -324,6 +348,12 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
   }
 }`;
 
+/**
+ * How many of its newest replies a resolved thread keeps. A later review only needs to see
+ * how the thread ended, and there can be many resolved threads on a pull request.
+ */
+const RESOLVED_THREAD_REPLIES = 3;
+
 const normalize = (login: string): string => {
   return login.replace(BOT_SUFFIX, '').toLowerCase();
 };
@@ -348,6 +378,30 @@ const fetchViewer = (): string | null => {
     }
     throw error;
   }
+};
+
+/**
+ * The finding of a thread followed by its replies, of which only the newest `limit` are kept
+ * when one is given.
+ */
+const toConversation = (
+  thread: ThreadNode,
+  limit?: number,
+): Pick<OpenThread, 'url' | 'diffHunk' | 'severity' | 'comments' | 'omittedComments'> => {
+  const finding = thread.finding.nodes[0];
+  const replies = thread.replies.nodes.filter((comment) => comment.url !== finding?.url);
+  const kept = limit === undefined ? replies : replies.slice(-limit);
+  return {
+    url: finding?.url ?? '',
+    diffHunk: finding?.diffHunk ?? '',
+    severity: parseSeverity(finding?.body ?? ''),
+    comments: [...(finding ? [finding] : []), ...kept].map((comment) => ({
+      author: toAuthor(comment.author).login,
+      createdAt: comment.createdAt,
+      body: comment.body,
+    })),
+    omittedComments: thread.replies.totalCount - 1 - kept.length,
+  };
 };
 
 /**
@@ -378,8 +432,8 @@ const fetchAll = <N>(
 };
 
 /**
- * Reads what earlier reviews left on a pull request: the threads that are still open and
- * the summaries that are still visible.
+ * Reads what earlier reviews left on a pull request: the threads that are still open, the
+ * threads that are resolved, and the summaries that are still visible.
  *
  * A comment counts as an earlier review's when it carries this plugin's marker and was
  * written by the review bot (claude[bot]) or by the current user. The marker is required
@@ -450,23 +504,18 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
       .filter((thread) => !thread.isResolved)
       .map((thread) => {
         // The newest comments matter most for a follow-up, so those are what a long thread keeps besides its finding.
-        const finding = thread.finding.nodes[0];
-        const replies = thread.replies.nodes.filter((comment) => comment.url !== finding?.url);
+        const { url, diffHunk, severity, comments, omittedComments } = toConversation(thread);
         return {
           id: thread.id,
-          url: finding?.url ?? '',
+          url,
           path: thread.path,
           line: thread.line,
           originalLine: thread.originalLine,
-          diffHunk: finding?.diffHunk ?? '',
+          diffHunk,
           isOutdated: thread.isOutdated,
-          severity: parseSeverity(finding?.body ?? ''),
-          comments: [...(finding ? [finding] : []), ...replies].map((comment) => ({
-            author: toAuthor(comment.author).login,
-            createdAt: comment.createdAt,
-            body: comment.body,
-          })),
-          omittedComments: thread.replies.totalCount - 1 - replies.length,
+          severity,
+          comments,
+          omittedComments,
         };
       }),
     resolvedThreadCount: threads.filter((thread) => thread.isResolved).length,
@@ -487,6 +536,21 @@ export const fetchReviewState = (repository: string, number: number): ReviewStat
       .filter((review) => review.state === 'CHANGES_REQUESTED' && isOurs(review.author, review.body))
       .filter((review) => isPoster(review.author) && approvedAt < (review.submittedAt ?? ''))
       .map((review) => ({ id: review.id, url: review.url })),
+    resolvedThreads: threads
+      .filter((thread) => thread.isResolved)
+      .map((thread) => {
+        const { url, severity, comments, omittedComments } = toConversation(thread, RESOLVED_THREAD_REPLIES);
+        return {
+          url,
+          path: thread.path,
+          line: thread.line,
+          originalLine: thread.originalLine,
+          isOutdated: thread.isOutdated,
+          severity,
+          comments,
+          omittedComments,
+        };
+      }),
   };
 };
 

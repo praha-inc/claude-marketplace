@@ -114,7 +114,7 @@ jobs:
 1. **Read the state**: Claude finds the pull request, checks out its code, and reads what earlier reviews left on it.
 2. **Follow up**: For every thread an earlier review left open, Claude checks the current code and replies in the thread with what it found. Threads that were addressed are resolved. This includes threads where the author gave a sound reason not to change the code, or declined an optional suggestion.
 3. **Review**: Claude runs `/code-review` and `/security-review` on the change.
-4. **Triage**: Claude drops duplicates and findings that do not hold up, keeps the ones the pull request introduced, and gives each a severity.
+4. **Triage**: Claude drops duplicates, findings that a resolved thread of an earlier review already settled, and findings that do not hold up, keeps the ones the pull request introduced, and gives each a severity.
 5. **Post**: The replies, the new inline comments and the verdict go up as one review, so the author gets one notification. The summary of an earlier review is then hidden as outdated, once every thread of that review is resolved. Until then it stays visible, because GitHub hides the comments of a review together with its summary.
 
 The review skills in step 3 end with a report, and a session tends to end its turn there, before anything is posted. The plugin's `Stop` hook guards against that: when a session started a review and ends its turn without posting it, the hook blocks the stop and tells Claude to go on, at most three times for one review file, of which a review that starts over after new commits gets a new one. It only acts in a session that ran the skill's `fetch-review-state.ts` script, and does nothing more once the review is posted.
@@ -136,6 +136,8 @@ The review **requests changes** when a new finding is 🔴, or when a 🔴 findi
 ### Earlier reviews
 
 A thread or summary counts as an earlier review's when this plugin wrote it, as `claude[bot]` or as the account running the skill. The plugin's comments carry a hidden marker, which is how they are told apart. Threads you wrote by hand, and comments that `claude[bot]` left through another integration, are never answered or resolved for you.
+
+A finding is not raised a second time once its thread is resolved, whether the review resolved it or you did: the next review reads the resolved threads too, and drops a finding that one of them already settled. It comes back only when a later commit reintroduces a problem that was fixed, or changes the code that the reason for leaving it relied on.
 
 ## Notes
 

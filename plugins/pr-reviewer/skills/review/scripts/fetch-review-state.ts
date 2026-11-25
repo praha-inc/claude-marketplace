@@ -1,7 +1,8 @@
 /**
  * Prints, as JSON, what earlier reviews by this plugin left on a pull request: the review
- * threads that are still open, with their whole conversation, and the summaries that are
- * still visible. Nothing on GitHub is changed.
+ * threads that are still open, with their whole conversation, the threads that are resolved,
+ * with their finding and how they ended, and the summaries that are still visible. Nothing
+ * on GitHub is changed.
  *
  * The output also names a `reviewFile` in a new temporary directory, which is where the
  * review is to be written for submit-review.ts. Handing out the path here keeps the file

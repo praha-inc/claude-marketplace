@@ -40,6 +40,7 @@ import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, MARKER_FILE_NAME, 
 const MAX_BLOCKS = 20;
 
 const START_SCRIPT = 'start-self-review.ts';
+const END_SCRIPT = 'end-self-review.ts';
 
 /**
  * A command that runs the script with node, as the skill does: `node` is the first word of
@@ -47,6 +48,9 @@ const START_SCRIPT = 'start-self-review.ts';
  * `git diff`, is not read.
  */
 const RUNS_START_SCRIPT = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*node\s[^|;&\n]*start-self-review\.ts/;
+
+/** The same for end-self-review.ts, which ends the run. */
+const RUNS_END_SCRIPT = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*node\s[^|;&\n]*end-self-review\.ts/;
 
 /** A command, or a part of one, that creates a pull request, with or without variables set in front of it. */
 const CREATES_PULL_REQUEST = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*gh\s+pr\s+create(?:\s|$)/;
@@ -114,18 +118,23 @@ const parseDescriptionFile = (output: string): string | undefined => {
 
 /**
  * What the session did about a pull request: the description file that the last run of
- * start-self-review.ts handed out, and whether `gh pr create` opened a pull request after
- * that. One opened before it belongs to an earlier run of the skill in the same session.
+ * start-self-review.ts handed out, and whether the run it started is over: `gh pr create`
+ * opened a pull request after that, or end-self-review.ts ended the run. Either of them
+ * before it belongs to an earlier run of the skill in the same session.
+ *
+ * That end-self-review.ts ran is read here as well as from the directory being gone, so that
+ * a directory of the same name that appears later is not taken for the run.
  */
-const readTranscript = (transcript: string): { descriptionFile: string | undefined; opened: boolean } => {
+const readTranscript = (transcript: string): { descriptionFile: string | undefined; over: boolean } => {
   // The calls of each command by the id of the tool use, which is what its result refers to.
   const startCalls = new Set<string>();
   const createCalls = new Set<string>();
+  const endCalls = new Set<string>();
   let descriptionFile: string | undefined;
-  let opened = false;
+  let over = false;
   for (const line of transcript.split('\n')) {
-    // Most lines are about neither command, and parsing every line of a long transcript is slow.
-    if (!line.includes(START_SCRIPT) && !line.includes('descriptionFile') && !line.includes('pr create') && !line.includes('/pull/')) {
+    // Most lines are about none of the commands or what they print, and parsing every line of a long transcript is slow.
+    if (!line.includes(START_SCRIPT) && !line.includes(END_SCRIPT) && !line.includes('descriptionFile') && !line.includes('pr create') && !line.includes('/pull/') && !line.includes('eleted')) {
       continue;
     }
     for (const block of blocksOf(line)) {
@@ -141,6 +150,9 @@ const readTranscript = (transcript: string): { descriptionFile: string | undefin
         if (CREATES_PULL_REQUEST.test(command)) {
           createCalls.add(block['id']);
         }
+        if (RUNS_END_SCRIPT.test(command)) {
+          endCalls.add(block['id']);
+        }
       } else if (block['type'] === 'tool_result' && typeof block['tool_use_id'] === 'string') {
         const output = textOf(block['content']);
         if (startCalls.has(block['tool_use_id'])) {
@@ -148,16 +160,20 @@ const readTranscript = (transcript: string): { descriptionFile: string | undefin
           const handedOut = parseDescriptionFile(output);
           if (handedOut !== undefined) {
             descriptionFile = handedOut;
-            opened = false;
+            over = false;
           }
         }
         if (createCalls.has(block['tool_use_id']) && PULL_REQUEST_URL.test(output)) {
-          opened = true;
+          over = true;
+        }
+        // What end-self-review.ts prints when it deleted the directory, or found it deleted.
+        if (endCalls.has(block['tool_use_id']) && /^(?:Deleted|Already deleted:) /m.test(output)) {
+          over = true;
         }
       }
     }
   }
-  return { descriptionFile, opened };
+  return { descriptionFile, over };
 };
 
 /**
@@ -217,8 +233,8 @@ const main = (): void => {
   }
 
   const transcript = readFileSync(transcriptPath, 'utf8');
-  const { descriptionFile, opened } = readTranscript(transcript);
-  const directory = descriptionFile === undefined || opened ? undefined : pendingDirectory(descriptionFile);
+  const { descriptionFile, over } = readTranscript(transcript);
+  const directory = descriptionFile === undefined || over ? undefined : pendingDirectory(descriptionFile);
   if (descriptionFile === undefined || directory === undefined) {
     return;
   }

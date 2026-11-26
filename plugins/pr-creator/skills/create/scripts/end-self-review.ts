@@ -5,7 +5,8 @@
  *
  * Usage: node end-self-review.ts <descriptionFile>
  */
-import { rmSync } from 'node:fs';
+import { realpathSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME } from './self-review.ts';
@@ -18,13 +19,17 @@ const main = (): number => {
   }
 
   const directory = path.dirname(path.resolve(file));
-  // Only a directory start-self-review.ts made: everything in it is deleted.
-  if (path.basename(file) !== DESCRIPTION_FILE_NAME || !path.basename(directory).startsWith(DESCRIPTION_DIRECTORY_PREFIX)) {
-    process.stderr.write(`Not a description file that start-self-review.ts handed out: ${file}\n`);
-    return 1;
-  }
-
   try {
+    // Only a directory start-self-review.ts made, which is one in the temporary directory:
+    // everything in it is deleted, and a directory of the same name can exist in a repository.
+    if (
+      path.basename(file) !== DESCRIPTION_FILE_NAME
+      || !path.basename(directory).startsWith(DESCRIPTION_DIRECTORY_PREFIX)
+      || realpathSync(path.dirname(directory)) !== realpathSync(tmpdir())
+    ) {
+      process.stderr.write(`Not a description file that start-self-review.ts handed out: ${file}\n`);
+      return 1;
+    }
     rmSync(directory, { recursive: true, force: true });
     process.stdout.write(`Deleted ${directory}\n`);
     return 0;

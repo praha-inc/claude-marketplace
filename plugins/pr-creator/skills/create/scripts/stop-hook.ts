@@ -32,11 +32,12 @@ import path from 'node:path';
 import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, STOP_BLOCKS_FILE_NAME } from './self-review.ts';
 
 /**
- * The self-review runs the review skills again after every fix, up to five rounds, and in
- * each round the turn can end twice: to wait for a skill that runs in the background, and
- * after a report.
+ * Only a guard against a loop, so it is generous. The self-review runs the review skills
+ * again after every fix, up to five rounds, and in each round the turn can end three times
+ * before it should: to wait for a skill that runs in the background, and after the report
+ * of each of the two skills.
  */
-const MAX_BLOCKS = 12;
+const MAX_BLOCKS = 20;
 
 const START_SCRIPT = 'start-self-review.ts';
 
@@ -124,7 +125,7 @@ const readTranscript = (transcript: string): { descriptionFile: string | undefin
   let opened = false;
   for (const line of transcript.split('\n')) {
     // Most lines are about neither command, and parsing every line of a long transcript is slow.
-    if (!line.includes(START_SCRIPT) && !line.includes('descriptionFile') && !line.includes('gh') && !line.includes('/pull/')) {
+    if (!line.includes(START_SCRIPT) && !line.includes('descriptionFile') && !line.includes('pr create') && !line.includes('/pull/')) {
       continue;
     }
     for (const block of blocksOf(line)) {
@@ -207,7 +208,7 @@ const main = (): void => {
   const transcript = readFileSync(transcriptPath, 'utf8');
   const { descriptionFile, opened } = readTranscript(transcript);
   const directory = descriptionFile === undefined || opened ? undefined : pendingDirectory(descriptionFile);
-  if (directory === undefined) {
+  if (descriptionFile === undefined || directory === undefined) {
     return;
   }
 
@@ -226,12 +227,15 @@ const main = (): void => {
   // Written before the stop is blocked: if the count cannot be kept, blocking could repeat without end.
   writeFileSync(blocksFile, `${blocks + 1} ${transcript.length}`);
 
+  // In full, because the skill's text, which says where the script is, may be long gone from the context.
+  const endCommand = `node "${path.join(import.meta.dirname, 'end-self-review.ts')}" "${descriptionFile}"`;
   process.stdout.write(`${JSON.stringify({
     decision: 'block',
     reason: [
       `This session started the self-review of the pr-creator:create skill (${START_SCRIPT}) and has not opened the pull request. This check runs whenever the turn ends in that state, and cannot tell why it ended.`,
       'If you ended the turn after the report of a skill the create skill runs (code-review, security-review, or the diagram skill): that report is not the end of the create skill. Go on from the step where you stopped, in this turn. In step 6 that is: run the review skill that has not run yet in this round, judge every finding, fix the valid ones and review again until a round is clean. Then go on through the steps that follow, up to step 10, and open the draft pull request.',
-      `If you stopped on purpose, do not go on because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If you need an answer from the user, say so and stop. If the run is given up, or step 6 told you to stop because the review does not converge, run end-self-review.ts with ${descriptionFile}, say why in one sentence and stop.`,
+      `If you stopped on purpose, do not go on because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If you need an answer from the user, say so and stop. If the pull request of this run already exists, do not open another: end the run with the command below, and finish step 10. If the run is given up, or step 6 told you to stop because the review does not converge, end the run with the command below, say why in one sentence and stop.`,
+      endCommand,
     ].join('\n\n'),
   })}\n`);
 };

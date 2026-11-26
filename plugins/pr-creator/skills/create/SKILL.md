@@ -184,7 +184,7 @@ If the change deliberately leaves out something the issue asks for, it is "part 
 
 ## 8. Write the description
 
-Write the description to the `descriptionFile` that step 6 printed. If you no longer have the path, run `start-self-review.ts` again and use the new one. If the file cannot be written there, because the session may not write outside the working tree, write it to a place in the working tree that git ignores or that you will not commit, and use that path from here on. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
+Write the description to the `descriptionFile` that step 6 printed. If you no longer have the path, run `start-self-review.ts` again and use the new one. If the file cannot be written there, because the session may not write outside the working tree, write it to a place in the working tree that git ignores or that you will not commit, and use that path for the description and the diagram from here on. The `descriptionFile` of step 6 stays the one to pass to `end-self-review.ts`, and the files you wrote elsewhere are yours to delete in step 10. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
 
 - **Summary**: what changed and why, for a reader who has not seen this conversation.
 - The line from step 7, on its own line.

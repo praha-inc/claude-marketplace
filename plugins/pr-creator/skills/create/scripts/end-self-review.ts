@@ -19,6 +19,15 @@ const main = (): number => {
 
   const directory = path.dirname(path.resolve(file));
   try {
+    // Run a second time, such as at the end of step 10 after the hook asked for it: nothing is left to do.
+    if (
+      path.basename(file) === DESCRIPTION_FILE_NAME
+      && path.basename(directory).startsWith(DESCRIPTION_DIRECTORY_PREFIX)
+      && lstatSync(directory, { throwIfNoEntry: false }) === undefined
+    ) {
+      process.stdout.write(`Already deleted: ${directory}\n`);
+      return 0;
+    }
     // Only a directory start-self-review.ts made, which holds its marker: everything in it
     // is deleted, and a directory of the same name can exist in a repository. Where the
     // temporary directory is does not say, because it can differ from one command to the next.

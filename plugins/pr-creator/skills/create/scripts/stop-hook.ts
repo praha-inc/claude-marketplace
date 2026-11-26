@@ -29,7 +29,7 @@
 import { lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, STOP_BLOCKS_FILE_NAME } from './self-review.ts';
+import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, MARKER_FILE_NAME, STOP_BLOCKS_FILE_NAME } from './self-review.ts';
 
 /**
  * Only a guard against a loop, so it is generous. The self-review runs the review skills
@@ -172,8 +172,12 @@ const pendingDirectory = (descriptionFile: string): string | undefined => {
   ) {
     return undefined;
   }
-  // Not followed when it is a link, because the count of blocks is written into it.
-  return lstatSync(directory, { throwIfNoEntry: false })?.isDirectory() ? directory : undefined;
+  // Not followed when it is a link, because the count of blocks is written into it. With the
+  // marker of start-self-review.ts, as end-self-review.ts asks for, so that a run the hook
+  // takes as unfinished is one that script can end.
+  const isDirectory = lstatSync(directory, { throwIfNoEntry: false })?.isDirectory() === true;
+  const hasMarker = lstatSync(path.join(directory, MARKER_FILE_NAME), { throwIfNoEntry: false })?.isFile() === true;
+  return isDirectory && hasMarker ? directory : undefined;
 };
 
 /**

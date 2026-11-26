@@ -5,11 +5,10 @@
  *
  * Usage: node end-self-review.ts <descriptionFile>
  */
-import { realpathSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { lstatSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME } from './self-review.ts';
+import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, MARKER_FILE_NAME } from './self-review.ts';
 
 const main = (): number => {
   const [file] = process.argv.slice(2);
@@ -20,12 +19,13 @@ const main = (): number => {
 
   const directory = path.dirname(path.resolve(file));
   try {
-    // Only a directory start-self-review.ts made, which is one in the temporary directory:
-    // everything in it is deleted, and a directory of the same name can exist in a repository.
+    // Only a directory start-self-review.ts made, which holds its marker: everything in it
+    // is deleted, and a directory of the same name can exist in a repository. Where the
+    // temporary directory is does not say, because it can differ from one command to the next.
     if (
       path.basename(file) !== DESCRIPTION_FILE_NAME
       || !path.basename(directory).startsWith(DESCRIPTION_DIRECTORY_PREFIX)
-      || realpathSync(path.dirname(directory)) !== realpathSync(tmpdir())
+      || lstatSync(path.join(directory, MARKER_FILE_NAME), { throwIfNoEntry: false })?.isFile() !== true
     ) {
       process.stderr.write(`Not a description file that start-self-review.ts handed out: ${file}\n`);
       return 1;

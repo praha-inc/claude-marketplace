@@ -10,15 +10,17 @@
  *
  * Usage: node start-self-review.ts
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME } from './self-review.ts';
+import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, MARKER_FILE_NAME } from './self-review.ts';
 
 const main = (): number => {
   try {
-    const descriptionFile = path.join(mkdtempSync(path.join(tmpdir(), DESCRIPTION_DIRECTORY_PREFIX)), DESCRIPTION_FILE_NAME);
+    const directory = mkdtempSync(path.join(tmpdir(), DESCRIPTION_DIRECTORY_PREFIX));
+    writeFileSync(path.join(directory, MARKER_FILE_NAME), '');
+    const descriptionFile = path.join(directory, DESCRIPTION_FILE_NAME);
     process.stdout.write(`${JSON.stringify({ descriptionFile }, null, 2)}\n`);
     return 0;
   } catch (error) {

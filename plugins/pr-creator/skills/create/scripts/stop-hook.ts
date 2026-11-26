@@ -43,10 +43,10 @@ const START_SCRIPT = 'start-self-review.ts';
 
 /**
  * A command that runs the script with node, as the skill does: `node` is the first word of
- * the command or of one of its parts. A command that only names the file, such as `cat` or
+ * the command or of one of its parts, with or without variables set in front of it. A command that only names the file, such as `cat` or
  * `git diff`, is not read.
  */
-const RUNS_START_SCRIPT = /(?:^|[;&|(\n])\s*node\s[^|;&\n]*start-self-review\.ts/;
+const RUNS_START_SCRIPT = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*node\s[^|;&\n]*start-self-review\.ts/;
 
 /** A command, or a part of one, that creates a pull request, with or without variables set in front of it. */
 const CREATES_PULL_REQUEST = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*gh\s+pr\s+create(?:\s|$)/;
@@ -198,6 +198,13 @@ const hasToolUse = (transcript: string): boolean => {
   });
 };
 
+/**
+ * A path as one word of a shell command, whatever characters it holds.
+ */
+const quote = (value: string): string => {
+  return `'${value.replaceAll('\'', String.raw`'\''`)}'`;
+};
+
 const main = (): void => {
   const input: unknown = JSON.parse(readFileSync(0, 'utf8'));
   const transcriptPath = isRecord(input) ? input['transcript_path'] : undefined;
@@ -228,7 +235,7 @@ const main = (): void => {
   writeFileSync(blocksFile, `${blocks + 1} ${transcript.length}`);
 
   // In full, because the skill's text, which says where the script is, may be long gone from the context.
-  const endCommand = `node "${path.join(import.meta.dirname, 'end-self-review.ts')}" "${descriptionFile}"`;
+  const endCommand = `node ${quote(path.join(import.meta.dirname, 'end-self-review.ts'))} ${quote(descriptionFile)}`;
   process.stdout.write(`${JSON.stringify({
     decision: 'block',
     reason: [

@@ -1,0 +1,16 @@
+{
+  "description": "Keep a run from ending before its pull request is opened",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/create/scripts/stop-hook.ts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

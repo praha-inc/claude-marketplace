@@ -12,8 +12,8 @@
  * - The transcript of the session, for the `descriptionFile` that start-self-review.ts
  *   printed last, and for a pull request that `gh pr create` opened after it. Only the
  *   output of those two commands is read, not the rest of the transcript.
- * - The file system: the directory of the description file is still there. A session that
- *   gave the run up can delete it.
+ * - The file system: the directory of the description file is still there. end-self-review.ts
+ *   deletes it, once the pull request is opened and when the run is given up.
  *
  * The hook cannot tell why a turn ended, so it lets a stop through rather than hold a session:
  * - A stop that follows a blocked one with no tool use in between goes through: Claude
@@ -32,10 +32,11 @@ import path from 'node:path';
 import { DESCRIPTION_DIRECTORY_PREFIX, DESCRIPTION_FILE_NAME, STOP_BLOCKS_FILE_NAME } from './self-review.ts';
 
 /**
- * The self-review runs the review skills again after every fix, up to five rounds, and each
- * round can end the turn early or wait for a skill that runs in the background.
+ * The self-review runs the review skills again after every fix, up to five rounds, and in
+ * each round the turn can end twice: to wait for a skill that runs in the background, and
+ * after a report.
  */
-const MAX_BLOCKS = 6;
+const MAX_BLOCKS = 12;
 
 const START_SCRIPT = 'start-self-review.ts';
 
@@ -46,14 +47,18 @@ const START_SCRIPT = 'start-self-review.ts';
  */
 const RUNS_START_SCRIPT = /(?:^|[;&|(\n])\s*node\s[^|;&\n]*start-self-review\.ts/;
 
-/** A command, or a part of one, that creates a pull request. */
-const CREATES_PULL_REQUEST = /(?:^|[;&|(\n])\s*gh\s+pr\s+create(?:\s|$)/;
+/** A command, or a part of one, that creates a pull request, with or without variables set in front of it. */
+const CREATES_PULL_REQUEST = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*gh\s+pr\s+create(?:\s|$)/;
 
 /** The `descriptionFile` property as start-self-review.ts prints it, with its value as a JSON string literal. */
 const DESCRIPTION_FILE_PROPERTY = /"descriptionFile":\s*("(?:[^"\\]|\\.)*")/;
 
-/** The URL of the pull request, which `gh pr create` prints when it created one, also when it then fails to attach a file. */
-const PULL_REQUEST_URL = /https?:\/\/\S+\/pull\/\d+/;
+/**
+ * The URL of the pull request on a line of its own, which is how `gh pr create` prints it
+ * when it created one, also when it then fails to attach a file. A URL inside other text,
+ * such as a description printed by another part of the command, is not that.
+ */
+const PULL_REQUEST_URL = /^https?:\/\/\S+\/pull\/\d+\s*$/m;
 
 type Block = Record<string, unknown>;
 
@@ -119,7 +124,7 @@ const readTranscript = (transcript: string): { descriptionFile: string | undefin
   let opened = false;
   for (const line of transcript.split('\n')) {
     // Most lines are about neither command, and parsing every line of a long transcript is slow.
-    if (!line.includes(START_SCRIPT) && !line.includes('descriptionFile') && !line.includes('pr create') && !line.includes('/pull/')) {
+    if (!line.includes(START_SCRIPT) && !line.includes('descriptionFile') && !line.includes('gh') && !line.includes('/pull/')) {
       continue;
     }
     for (const block of blocksOf(line)) {
@@ -213,7 +218,9 @@ const main = (): void => {
   }
   // Claude is going on because a stop was blocked, and has used no tool since this hook
   // blocked one: it answered instead of going on, and asking again would get the same answer.
-  if (input['stop_hook_active'] === true && 0 < blocks && !hasToolUse(transcript.slice(transcriptLength))) {
+  // A transcript shorter than it was is another file, of a session that was resumed: all of it is new.
+  const sinceLastBlock = transcriptLength <= transcript.length ? transcript.slice(transcriptLength) : transcript;
+  if (input['stop_hook_active'] === true && 0 < blocks && !hasToolUse(sinceLastBlock)) {
     return;
   }
   // Written before the stop is blocked: if the count cannot be kept, blocking could repeat without end.
@@ -223,8 +230,8 @@ const main = (): void => {
     decision: 'block',
     reason: [
       `This session started the self-review of the pr-creator:create skill (${START_SCRIPT}) and has not opened the pull request. This check runs whenever the turn ends in that state, and cannot tell why it ended.`,
-      'If you ended the turn after the report of the code-review or security-review skill: that report is not the end of the skill. Go on from where you stopped in step 6, in this turn: run the review skill that has not run yet in this round, judge every finding, fix the valid ones and review again until a round is clean, then go on through steps 7 to 10 and open the draft pull request.',
-      'If you stopped on purpose, do not go on because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If step 6 told you to stop because the review does not converge, if you need an answer from the user, or if the run was given up, say why in one sentence and stop.',
+      'If you ended the turn after the report of a skill the create skill runs (code-review, security-review, or the diagram skill): that report is not the end of the create skill. Go on from the step where you stopped, in this turn. In step 6 that is: run the review skill that has not run yet in this round, judge every finding, fix the valid ones and review again until a round is clean. Then go on through the steps that follow, up to step 10, and open the draft pull request.',
+      `If you stopped on purpose, do not go on because of this message. If a review skill is still running in the background, say that you are waiting for its report and stop: you go on when it arrives. If you need an answer from the user, say so and stop. If the run is given up, or step 6 told you to stop because the review does not converge, run end-self-review.ts with ${descriptionFile}, say why in one sentence and stop.`,
     ].join('\n\n'),
   })}\n`);
 };

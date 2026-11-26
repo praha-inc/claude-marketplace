@@ -65,7 +65,7 @@ A finding is fixed only when Claude confirms the problem is real and the change 
 
 The loop stops without opening a pull request, and Claude reports where things stand, when five rounds still leave valid findings, when a finding comes back after its fix, or when a finding cannot be fixed within the work.
 
-The review skills end with a report, and a session tends to end its turn there, before the findings are judged and the pull request is opened. The plugin's `Stop` hook guards against that: from the start of the self-review until the pull request is created, it blocks the end of a turn and tells Claude to go on, at most six times in one run. It only acts in a session that started a self-review with this skill.
+The review skills end with a report, and a session tends to end its turn there, before the findings are judged and the pull request is opened. The plugin's `Stop` hook guards against that: from the start of the self-review until the pull request is created, it blocks the end of a turn and tells Claude to go on, at most twelve times for one pull request. It only acts in a session that ran the skill's `start-self-review.ts` script, and stops once the pull request is created or the run is given up.
 
 ### Linking the issue
 

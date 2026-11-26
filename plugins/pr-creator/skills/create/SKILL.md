@@ -123,14 +123,22 @@ Run the agent again after restructuring, until it reports no departure you have 
 
 ## 6. Review, fix, and review again
 
+Mark the start of the review first, once, before the first round:
+
+```sh
+node "${CLAUDE_SKILL_DIR}/scripts/start-self-review.ts"
+```
+
+It prints the `descriptionFile`, the path the description of the pull request is written to in step 8. It is in a new temporary directory, so the description cannot be committed by accident.
+
+From this command on, the plugin's Stop hook takes the run as unfinished until step 10 has created the pull request. When the turn ends before that, it blocks the stop and sends you back here. It is a safety net, not a step: do not end the turn expecting it to carry you on. It cannot tell why the turn ended, so it also sends you back when you stop on purpose: to wait for a review skill that runs in the background, to ask the user, or because this step tells you to stop and report. Say in one sentence why you stopped, and stop: a stop that follows with no tool use in between is let through.
+
 Run both of these skills on the branch's changes with the Skill tool, one after the other, in this conversation rather than in a subagent, because they start their own subagents:
 
 1. `code-review`. Do not pass `--fix` or `--comment`: the findings come to you first, and there is no pull request yet.
 2. `security-review`.
 
 A skill may run in the background and report later, so wait until both have reported. If one of them is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say so in the pull request.
-
-**A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to judge the findings. Do not end your turn after either report, in any round: the work is not fixed and no pull request exists at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with nothing opened. This task is finished only when step 10 has opened the pull request, or when this step tells you to stop and report.
 
 Then judge every finding. A review skill reads the change without knowing why it was written, so some findings are wrong, and fixing a wrong finding makes the code worse.
 
@@ -168,7 +176,7 @@ If the change deliberately leaves out something the issue asks for, it is "part 
 
 ## 8. Write the description
 
-Write the description to a file outside the working tree's tracked files, so it cannot be committed by accident. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
+Write the description to the `descriptionFile` that step 6 printed. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
 
 - **Summary**: what changed and why, for a reader who has not seen this conversation.
 - The line from step 7, on its own line.
@@ -232,6 +240,6 @@ Then confirm the link, because a closing keyword that GitHub did not recognise f
 gh pr view --json url,isDraft,closingIssuesReferences
 ```
 
-`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` again when the description shows a diagram, since the file still holds the local path. Then delete the file, and the files of the diagram with it.
+`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` again when the description shows a diagram, since the file still holds the local path. Then delete the directory of the description file, which holds the files of the diagram as well.
 
 Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified. Repeat the decision of step 9 in one line: what the diagram in the description shows, or why the change had nothing to draw, so they can ask for one.

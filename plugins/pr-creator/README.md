@@ -65,6 +65,8 @@ A finding is fixed only when Claude confirms the problem is real and the change 
 
 The loop stops without opening a pull request, and Claude reports where things stand, when five rounds still leave valid findings, when a finding comes back after its fix, or when a finding cannot be fixed within the work.
 
+The review skills end with a report, and a session tends to end its turn there, before the findings are judged and the pull request is opened. The plugin's `Stop` hook guards against that: from the start of the self-review until the pull request is created, it blocks the end of a turn and tells Claude to go on, at most six times in one run. It only acts in a session that started a self-review with this skill.
+
 ### Linking the issue
 
 | Situation | In the pull request | On merge |
@@ -84,10 +86,12 @@ If the `diagram-writer:draw` skill is not available or cannot render, the pull r
 
 ## Notes
 
-- The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to the repository, and Node.js 22.18 or later available as `node`, because its script is a TypeScript file run with Node.js type stripping.
+- The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to the repository, and Node.js 22.18 or later available as `node`, because its scripts are TypeScript files run with Node.js type stripping.
 - When the repository has an `ARCHITECTURE.md`, at the root, under `docs/` or next to the code being changed, Claude implements the change the way it describes. Departing from it counts as a risky decision.
 - The plugin depends on [diagram-writer](../diagram-writer), which is installed with it. Drawing a diagram needs a Chromium-based browser, and attaching one needs a `gh` that has the `--attach` flag. Without them the pull request is still opened, without a diagram.
 - The pull request is always a draft. Mark it ready for review yourself once you have looked at it.
+- When Claude stops on purpose during the self-review, to ask you something, to wait for a review skill that runs in the background, or because the review does not converge, the `Stop` hook cannot tell that from a run that was cut short. Claude is asked once to go on, says why it stopped, and the turn ends.
+- The `Stop` hook runs `node` at the end of every turn while the plugin is enabled, also in sessions that do not use the skill, where it does nothing.
 - Each round of self-review runs both review skills, which start their own subagents, so a change that needs several rounds takes a while.
 - To have the pull request reviewed on GitHub afterwards, see [pr-reviewer](../pr-reviewer).
 

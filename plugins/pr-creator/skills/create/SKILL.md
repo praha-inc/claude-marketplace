@@ -59,7 +59,7 @@ Naming, the internals of a function, how to write a test: these are not risky de
 
 - Check `git status`. If there are uncommitted changes that are not part of this work, stop and ask, rather than carrying someone's unfinished work into the pull request or moving it aside.
 - Find the base branch: the repository's default branch, unless the user or the issue names another.
-- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 8 needs.
+- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 10 needs.
 - If the current branch is already a branch for this work, stay on it.
 
 ## 4. Implement
@@ -130,7 +130,7 @@ Run both of these skills on the branch's changes with the Skill tool, one after 
 
 A skill may run in the background and report later, so wait until both have reported. If one of them is not available in this session, do that part of the review yourself with the same aim (correctness bugs for the first, exploitable vulnerabilities for the second), and say so in the pull request.
 
-**A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to judge the findings. Do not end your turn after either report, in any round: the work is not fixed and no pull request exists at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with nothing opened. This task is finished only when step 8 has opened the pull request, or when this step tells you to stop and report.
+**A review skill's report is not the end of this task.** `security-review` works by loading its own instructions into this conversation, and they end with "Your final reply must contain the markdown report and nothing else". That sentence is about the form of that skill's report. It does not mean the conversation ends there. Write the report it asks for, and then, in the same turn, go on to judge the findings. Do not end your turn after either report, in any round: the work is not fixed and no pull request exists at that point, and when nobody is there to say "continue", as in CI, the run would finish as a success with nothing opened. This task is finished only when step 10 has opened the pull request, or when this step tells you to stop and report.
 
 Then judge every finding. A review skill reads the change without knowing why it was written, so some findings are wrong, and fixing a wrong finding makes the code worse.
 
@@ -166,9 +166,9 @@ GitHub closes an issue when a pull request whose description says `Closes #123` 
 
 If the change deliberately leaves out something the issue asks for, it is "part of", and the pull request says what is left.
 
-## 8. Open the draft pull request
+## 8. Write the description
 
-Push the branch (`git push -u origin <branch>`) and write the description to a file outside the working tree's tracked files, so it cannot be committed by accident. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
+Write the description to a file outside the working tree's tracked files, so it cannot be committed by accident. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
 
 - **Summary**: what changed and why, for a reader who has not seen this conversation.
 - The line from step 7, on its own line.
@@ -177,21 +177,48 @@ Push the branch (`git push -u origin <branch>`) and write the description to a f
 - **Self-review**: how many rounds were run, what they found and fixed in a line each, and the findings judged not valid with their reason, so the reviewer does not raise them again.
 - **Test plan**: the checks that were run and their result, and what was not verified.
 
-### A diagram, where it helps
+## 9. Decide on a diagram
 
-The description is finished at this point. A diagram is an aid to a description that is already complete, never a part of it and never a requirement: a description without one is missing nothing.
+The description is finished and says everything in words. Now decide whether it also shows a diagram. This is a step of its own because a decision made in passing here is always "no": the review is clean, the description is written, and the pull request is one command away. It ends with a decision you state before step 10.
 
-A reviewer may understand the change faster with one when it alters how parts connect, the order of calls between them, the states something moves through, a schema, or how components are cut, and the description has to walk them through it in prose. The clearest sign is a path that the change spreads over three or more places, such as a screen, an API and a domain module, so that no single file of the diff shows where it branches and where it ends up. A change inside one function or one file has nothing to draw.
+Most pull requests have nothing to draw, and a diagram that carries nothing makes the reviewer look for a point that is not there. But when a change has a shape, the reviewer has to rebuild it from prose and from files the diff shows one at a time, and that costs them more than the diagram costs you. So decide from what the change does, not from whether the description is clear enough without one.
 
-When one would help, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show, and that it is to be drawn from the branch's changes against the base branch. Have it write its files next to the description file. It hands back the path of a PNG and an alternative text, or tells you that no diagram helps, which is a result to accept. Then:
+A change has a shape when it adds one of these, or adds, removes or redirects a part of one that exists:
+
+- **An order of calls between three or more participants that run apart from each other**, such as a browser, the application and an identity provider: a login, a chain of redirects, a webhook, a job that hands work on. A function that calls two others in turn is not this.
+- **A path that branches and ends in different places**: a condition that sends a request to another mutation, another screen or a fallback.
+- **How three or more parts connect**: a service, a module or an external system placed between existing ones, or a dependency that now points another way.
+- **Three or more states something moves through**, and what moves it from one to the next.
+- **A schema**: tables or types added or removed, or a relation between them changed.
+- **How components or modules are cut**: which contains which, and which owns what.
+
+Look for the shape on the whole path the change is part of, not only in the files of the diff. A login is implemented in one application, and its path still runs through the browser and the identity provider.
+
+A change has no shape when none of these is there. Three kinds of change look bigger than they are:
+
+- What it does happens inside one function or one file, and what calls it and what it calls stay as they were.
+- It is the same edit in many places: a rename, a helper replaced by another, a column dropped, a dependency updated. Many files change and no connection between them does.
+- What there is to show is a set of separate things, with no order and no connection between them. A list or a table says that better.
+
+When you are unsure, name the boxes the diagram would have and the lines between them. Three or more boxes, with a box or a line that this change adds, removes or redirects, is a shape. Fewer boxes, or lines that all stay as they were, is not. A passage of the description that walks the reviewer from one part to the next through what the change adds is a reason to do this count.
+
+**In a stack of pull requests**, or among the sub-issues of one piece of work, a path often crosses several pull requests. Draw it once, in the pull request that makes it work from end to end, which is usually the one that connects the caller to what the earlier ones added, and mark the part that pull request adds. The other pull requests get a diagram only for a shape of their own. When the run opens several pull requests, decide for each of them.
+
+**That the text already says it is not a reason to leave the diagram out.** The description has to say everything in words with or without a diagram, so by that test no pull request would ever have one. You are also the wrong judge of it: you wrote the text with the code in your head, and the reviewer reads it without. Neither is the length of the run so far a reason.
+
+State the decision in one line before going on: what the diagram will show, or why the change has nothing to draw.
+
+To draw it, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show, which parts of that the branch changes against the base branch, and where in the code the parts it leaves as they are can be read. Have it write its files next to the description file. It hands back the path of a PNG and an alternative text. It may also find, once it has read the change, that no diagram helps, and that is a result to accept. Then:
 
 - Put `![<alternative text>](./<name>.png)` under the summary. The path is relative to the description file.
 - Leave the text as it was. Everything the diagram shows must still be said in words: the image is not shown everywhere the description is read, and an agent that reviews the pull request reads only the text.
-- Add `--attach <path of the PNG>` to the command below. GitHub CLI uploads the file and points the reference at it.
+- Add `--attach <path of the PNG>` to the command in step 10. GitHub CLI uploads the file and points the reference at it.
 
-Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The pull request does not depend on it.
+Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The pull request does not depend on it, but say so at the end, since the change did call for one.
 
-Create it as a draft, with a title and labels in the repository's conventions from step 3:
+## 10. Open the draft pull request
+
+Push the branch (`git push -u origin <branch>`) and create the pull request as a draft, with a title and labels in the repository's conventions from step 3:
 
 ```sh
 gh pr create --draft --base <base> --title "<title>" --body-file <file>
@@ -207,4 +234,4 @@ gh pr view --json url,isDraft,closingIssuesReferences
 
 `closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` again when the description shows a diagram, since the file still holds the local path. Then delete the file, and the files of the diagram with it.
 
-Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified. Say in one line whether the description shows a diagram, and when it does not, what you considered drawing, so they can ask for it.
+Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified. Repeat the decision of step 9 in one line: what the diagram in the description shows, or why the change had nothing to draw, so they can ask for one.

@@ -16,13 +16,16 @@ The design of a diagram is not yours to decide. The templates, one stylesheet an
 
 ## 1. Decide whether a diagram helps
 
-A diagram earns its place when the reader would otherwise have to assemble a picture in their head from prose: three or more parts and how they connect, an order of events between several participants, the states something moves through, or how a structure differs before and after the work.
+A diagram earns its place when the reader would otherwise have to assemble a picture in their head from prose: three or more parts and how they connect, an order of events between three or more participants, a path that branches and ends in different places, the states something moves through, or how a structure differs before and after the work.
 
 Do not draw one when:
 
 - The change stays inside one function, file or component. There is nothing to connect.
-- A sentence, a list or a table says it as well.
+- It is the same edit in many places, such as a rename or a dependency update. Many files change and no connection between them does.
+- What there is to show is a set of separate things, with no order and no connection between them. A list or a table says that better.
 - You would be drawing it because an issue "should have a diagram". A diagram that carries nothing makes the reader look for a point that is not there.
+
+That the text already says it is not one of these reasons. The text of an issue or a pull request has to say everything with or without a diagram, so a diagram never adds a fact: it saves the reader from holding the parts and their connections in their head while they read. When another skill asked for the diagram, it has already found a shape in the work. Hand back "no diagram" only when you read the code and the shape is not there.
 
 One diagram is the norm, two when they answer different questions, such as the structure and the order of calls. When no diagram helps, say so to whoever asked and stop here.
 
@@ -60,7 +63,7 @@ And the ones only you can keep:
 - **Draw what you have read.** Every part and every line must be something you saw in the code, the diff or the issue. A reviewer trusts a diagram more than a paragraph, so a line that is not in the code does more harm than no diagram.
 - **Write it in the language of the issue or pull request**, and call each part what the code calls it.
 - **The title states the point**, not the kind of diagram: "Coupons are checked by a new service", not "Architecture". The caption under it is one sentence, or left out.
-- **Leave out what the work does not touch**, and say in the caption that it was left out. Aim for at most about twelve boxes, five layers, six actors or twelve messages. Past that, the reader stops reading, so split the diagram or raise its level.
+- **Leave out what has nothing to do with the work**, and say in the caption that it was left out. The parts a change sits between stay in, unmarked: they are what lets the reader place the change. Aim for at most about twelve boxes, five layers, six actors or twelve messages. Past that, the reader stops reading, so split the diagram or raise its level.
 - **Mark only what the work changes.** `data-change` on everything marks nothing. In an issue where nothing has changed yet, `data-emphasis` marks what the issue is about.
 - **Keep labels to a few words.** A box is a name, and a line's label is a verb, a protocol or an event.
 

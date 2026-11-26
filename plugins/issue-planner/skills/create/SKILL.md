@@ -12,7 +12,7 @@ The request, if the user gave one with the command: $ARGUMENTS
 
 Talk to the user in the language they use. Write the issues in the language the repository's existing issues are written in, and ask if that is unclear.
 
-Nothing is created on GitHub until the user approves in step 10. Issues notify people and cannot be cleanly taken back, so everything before that step is reading and writing a local draft.
+Nothing is created on GitHub until the user approves in step 11. Issues notify people and cannot be cleanly taken back, so everything before that step is reading and writing a local draft.
 
 ## 1. Interview
 
@@ -71,7 +71,7 @@ Write each body for a reader who has not seen this conversation. Follow the repo
 - Parent issue: background and reason, goal, scope and what is out of scope, acceptance criteria for the whole, and notes such as decisions made with the user, earlier decisions that still apply (with their links), and assumptions.
 - Sub-issue: what to change and why, pointers to the relevant code (paths and symbols from the investigation, since these save the implementer the search you already did), and acceptance criteria.
 
-Do not list the sub-issues in the parent body, and do not write the dependencies between sub-issues into the bodies. GitHub shows both once the issues are created, from the links the script in step 10 registers.
+Do not list the sub-issues in the parent body, and do not write the dependencies between sub-issues into the bodies. GitHub shows both once the issues are created, from the links the script in step 11 registers.
 
 ## 5. Loop until nothing is missing
 
@@ -79,7 +79,7 @@ Designing the split usually raises new questions: an unclear boundary between tw
 
 ## 6. Write the draft
 
-Write the draft to `.claude/issue-drafts/<short-slug>.md` in the project. Use this exact structure, because the script in step 10 creates the issues from this file:
+Write the draft to `.claude/issue-drafts/<short-slug>.md` in the project. Use this exact structure, because the script in step 11 creates the issues from this file:
 
 ```markdown
 ---
@@ -110,7 +110,7 @@ Body of the third sub-issue.
 ```
 
 - `repository` is where the parent issue, and every sub-issue without its own `Repository:` line, is created.
-- `project` stays empty until step 9.
+- `project` stays empty until step 10.
 - The lines directly under a heading are optional metadata. `Repository:` puts a sub-issue in another repository of the same owner. `Blocked by:` lists, comma separated, the sub-issues that must be merged before this one, each by its position in the draft (1 is the first sub-issue). It can only name sub-issues above it. To depend on an issue that already exists, give its URL instead.
 - A blank line ends the metadata, and everything up to the next `# Issue:` or `# Sub-issue:` heading is the body.
 
@@ -120,35 +120,55 @@ Check the structure of the draft:
 node "${CLAUDE_SKILL_DIR}/scripts/create-issues.ts" --dry-run .claude/issue-drafts/<short-slug>.md
 ```
 
-### A diagram, where it helps
+## 7. Decide on a diagram
 
-The draft is finished at this point. A diagram is an aid to a body that is already complete, never a part of it and never a requirement: a draft without one is missing nothing.
+The draft is finished and says everything in words. Now decide whether a body also shows a diagram. This is a step of its own because a decision made in passing here is always "no": the draft is written, and the review is the next thing to do. It ends with a decision you state before step 8.
 
-Read the draft once more as someone who has not seen the code. If there is a place where they would have to assemble a picture from the prose, a diagram may save them the work: how the parts involved connect today and how they will after, a flow that crosses services or repositories, the states something moves through.
+Most issues have nothing to draw, and a diagram that carries nothing makes the reader look for a point that is not there. But when the work has a shape, the person who picks up the issue has to rebuild it from prose before they can start, and that costs them more than the diagram costs you. So decide from what the work is, not from whether the draft is clear enough without one.
 
-In a draft with sub-issues, the clearest sign is one behaviour that is told across three or more of them, so that the reader of any single one cannot see the whole path: a branch that one sub-issue decides, another acts on, and a third falls back from. Each sub-issue is complete on its own and still nobody is shown how they meet. A sub-issue that stays inside one module usually has nothing to draw, and the order of the sub-issues never needs a diagram, since GitHub shows it.
+The work has a shape when the draft describes one of these, as it is today or as it will be:
 
-A diagram goes in the body whose text it illustrates, so one that shows how the sub-issues meet goes in the parent issue. When the parent issue already exists and the draft does not write its body, do not move that diagram into a sub-issue. Tell the user in step 8 what it would show, and add it to the parent only when they ask for it.
+- **How three or more parts connect**: services, modules, repositories or external systems, and what the work places between them, takes away or points another way.
+- **A path that crosses three or more places and branches**, such as a screen, an API and a domain module, or several services or repositories, where the branches end in different places.
+- **An order of calls between three or more participants that run apart from each other**, such as a browser, the application and an identity provider: a login, a chain of redirects, a webhook, a job that hands work on.
+- **Three or more states something moves through**, and what moves it from one to the next.
+- **A schema**: tables or types added or removed, or a relation between them changed.
 
-When one would help, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show and which part of the draft it illustrates, and have it write its files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.html`. It hands back the path of a PNG and an alternative text, or tells you that no diagram helps, which is a result to accept, not to argue with. Then:
+In a draft with sub-issues, the clearest sign is one behaviour that is told across three or more of them, so that the reader of any single one cannot see the whole path: a branch that one sub-issue decides, another acts on, and a third falls back from. Each sub-issue is complete on its own and still nobody is shown how they meet.
+
+The work has no shape when none of these is there. Three kinds of work look bigger than they are:
+
+- What changes is inside one function or one file, and what calls it and what it calls stay as they were. A sub-issue that stays inside one module is usually this.
+- It is the same edit in many places: a rename, a move to another helper, a dependency updated.
+- What there is to show is a set of separate things, with no order and no connection between them. A list or a table says that better. The order of the sub-issues is one of these, and GitHub shows it.
+
+When you are unsure, name the boxes the diagram would have and the lines between them. Three or more boxes, with a box or a line that the work adds, removes or redirects, is a shape. Fewer boxes, or lines that all stay as they were, is not. A passage of the draft that walks the reader from one part to the next is a reason to do this count.
+
+**That the text already says it is not a reason to leave the diagram out.** A body has to say everything in words with or without a diagram, so by that test no issue would ever have one. You are also the wrong judge of it: you wrote the text with the code and the investigation in your head, and the reader has neither.
+
+A diagram goes in the body whose text it illustrates, so one that shows how the sub-issues meet goes in the parent issue. When the parent issue already exists and the draft does not write its body, do not move that diagram into a sub-issue. Tell the user in step 9 what it would show, and add it to the parent only when they ask for it.
+
+State the decision in one line before going on: what the diagram will show and which body it goes in, or why the work has nothing to draw.
+
+To draw it, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show and which part of the draft it illustrates, and have it write its files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.html`. It hands back the path of a PNG and an alternative text. It may also find, once it has read the code, that no diagram helps, and that is a result to accept. Then:
 
 - Put `![<alternative text>](./<short-slug>-<name>.png)` in the body, next to the text it illustrates.
 - Leave the text as it was. Everything the diagram shows must still be said in words: the person or agent who picks up the issue may read only the text, and a body that says "see the diagram" has lost what it was meant to say. When the diagram brings together what several sub-issues say, the body it goes in may not say it yet: write those few sentences next to the image.
-- Run the dry run again. It checks that every image a body shows is a file next to the draft.
+- Run the dry run of step 6 again. It checks that every image a body shows is a file next to the draft.
 
-Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The issue does not depend on it.
+Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The issue does not depend on it, but tell the user in step 9, since the work did call for one.
 
-## 7. Have the draft reviewed
+## 8. Have the draft reviewed
 
 Start the `issue-planner:reviewer` agent and give it only the path of the draft. Do not tell it what the user asked for, what you investigated, or what you think of the draft. It reads the draft the way the eventual implementer will, with none of this conversation, so whatever it cannot work out is something the issue fails to say. Context from you would hide exactly those gaps.
 
-Fix the blocking problems it reports. If fixing one needs an answer from the user or more investigation, go back to the step it belongs to. When a change to the draft makes a diagram say something the text no longer says, draw it again with `diagram-writer:draw` or take it out. After changes that alter the scope, the split or the dependencies, run the review again on the new draft. Use your judgment on its suggested improvements, and carry any question you cannot settle into step 8.
+Fix the blocking problems it reports. If fixing one needs an answer from the user or more investigation, go back to the step it belongs to. When a change to the draft makes a diagram say something the text no longer says, draw it again with `diagram-writer:draw` or take it out. After changes that alter the scope, the split or the dependencies, run the review again on the new draft. Use your judgment on its suggested improvements, and carry any question you cannot settle into step 9.
 
-## 8. Ask the user to review
+## 9. Ask the user to review
 
-Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. Say in one line whether the draft has a diagram: the path of its PNG, so they can look at it, or that it has none and what you considered drawing, so they can ask for it. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 7.
+Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. Repeat the decision of step 7 in one line: the path of the diagram's PNG, so they can look at it, or why the work had nothing to draw, so they can ask for one. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 8.
 
-## 9. Find a GitHub Project
+## 10. Find a GitHub Project
 
 Look for projects the issues could be added to:
 
@@ -160,7 +180,7 @@ The output lists the open projects linked to the repository in `linked`, and the
 
 If the script reports that the token lacks the project scope, tell the user they can grant it by running `gh auth refresh -s project` themselves, and ask whether to do that or to continue without a project. If there are no projects at all, say so and move on without asking.
 
-## 10. Create the issues
+## 11. Create the issues
 
 Ask for approval to create the issues, stating how many will be created, in which repositories, and the project they will be added to. Create them only after the user clearly approves. Approval of an earlier draft does not cover a draft that changed since.
 

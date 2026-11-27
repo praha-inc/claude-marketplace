@@ -32,8 +32,9 @@ Claude also uses the skill on its own when you ask it to implement something and
 6. **Self-review**: Claude runs `/code-review` and `/security-review`, judges each finding, fixes the valid ones, and runs both again on the whole change. This repeats until a round finds nothing valid.
 7. **Link the issue**: Claude decides whether merging the pull request finishes the issue.
 8. **Describe**: Claude writes the description: what changed and why, the decisions it made, how the self-review went, and the test plan.
-9. **Decide on a diagram**: Claude decides from what the change does whether the description also shows a diagram, drawn with [diagram-writer](../diagram-writer), and says which it decided and why.
-10. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue.
+9. **Decide on screenshots**: When the change alters what a user sees, Claude runs the application, captures the screens it changed, and adds them to the description, with a before next to the after for a screen that existed already.
+10. **Decide on a diagram**: Claude decides from what the change does whether the description also shows a diagram, drawn with [diagram-writer](../diagram-writer), and says which it decided and why.
+11. **Open**: Claude pushes the branch and opens a draft pull request, then checks that GitHub registered the link to the issue.
 
 ### The two modes
 
@@ -76,6 +77,18 @@ The review skills end with a report, and a session tends to end its turn there, 
 
 GitHub closes issues only from pull requests merged into the default branch. With another base branch, Claude tells you the issue will not close.
 
+### Screenshots
+
+A reviewer cannot see a screen in a diff. When the change adds or alters something that is rendered for a person (a page, a component, its layout, styles or text, or one of its states), Claude captures it after the self-review is clean and adds a Screenshots section to the description. A change to backend logic, a refactoring that leaves the screens as they were, or configuration gets none.
+
+- **What**: each screen or state the change adds or alters. For a screen that existed already, a before from the base branch, taken in a separate worktree, is shown next to the after. Screenshots are taken again when the code changes after them.
+- **How**: with what the repository has for it, such as a Storybook or end-to-end tests that take screenshots, then with a browser or simulator tool of the session, then with a headless Chromium-based browser.
+- **Data**: seed data, fixtures or a test account. Claude does not capture personal data of real people or credentials, since the images are uploaded to GitHub.
+
+Claude looks at each image before using it. One that shows the change does not work is treated like a finding of the review: it is fixed and the review runs again. The images are attached with `gh pr create --attach`, and what changed on the screen is still said in the text.
+
+If the application cannot be run in the session, or nothing in it can capture a screen, the pull request is opened without screenshots, and the test plan says the screens were not looked at.
+
 ### Diagrams
 
 Most pull requests have nothing to draw. Claude writes the description first, and then decides on a diagram as a step of its own, from what the change does: an order of calls between three or more participants, a path that branches and ends in different places, how three or more parts connect, the states something moves through, a schema, or how components are cut. A change inside one module, or the same edit in many places, gets none. In a stack of pull requests, the path is drawn in the one where it comes together.
@@ -88,7 +101,8 @@ If the `diagram-writer:draw` skill is not available or cannot render, the pull r
 
 - The plugin needs the [GitHub CLI](https://cli.github.com/) (`gh`), authenticated with write access to the repository, and Node.js 22.18 or later available as `node`, because its scripts are TypeScript files run with Node.js type stripping.
 - When the repository has an `ARCHITECTURE.md`, at the root, under `docs/` or next to the code being changed, Claude implements the change the way it describes. Departing from it counts as a risky decision.
-- The plugin depends on [diagram-writer](../diagram-writer), which is installed with it. Drawing a diagram needs a Chromium-based browser, and attaching one needs a `gh` that has the `--attach` flag. Without them the pull request is still opened, without a diagram.
+- The plugin depends on [diagram-writer](../diagram-writer), which is installed with it. Drawing a diagram needs a Chromium-based browser, and attaching an image needs a `gh` that has the `--attach` flag. Without them the pull request is still opened, without the image.
+- Screenshots need the application to run in the session, and a way to capture it: the repository's own tooling, a browser or simulator tool, or a Chromium-based browser.
 - The pull request is always a draft. Mark it ready for review yourself once you have looked at it.
 - When Claude stops on purpose during the self-review, to ask you something, to wait for a review skill that runs in the background, or because the review does not converge, the `Stop` hook cannot tell that from a run that was cut short. Claude is asked once to go on, says why it stopped, and the turn ends. That repeats at the end of each later turn until the pull request is opened or Claude ends the run, which it does when the run is given up.
 - The `Stop` hook runs `node` at the end of every turn while the plugin is enabled, also in sessions that do not use the skill, where it does nothing.

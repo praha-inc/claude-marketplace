@@ -19,7 +19,7 @@ const main = (): number => {
 
   const directory = path.dirname(path.resolve(file));
   try {
-    // Run a second time, such as at the end of step 10 after the hook asked for it: nothing is left to do.
+    // Run a second time, such as at the end of step 11 after the hook asked for it: nothing is left to do.
     if (
       path.basename(file) === DESCRIPTION_FILE_NAME
       && path.basename(directory).startsWith(DESCRIPTION_DIRECTORY_PREFIX)

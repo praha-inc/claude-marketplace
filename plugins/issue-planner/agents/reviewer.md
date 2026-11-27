@@ -12,7 +12,7 @@ You only read. Do not edit the draft or any other file, and do not change anythi
 
 The frontmatter names the repository. `# Issue:` is the parent issue, describing the whole outcome. Each `# Sub-issue:` is meant to be completed by exactly one pull request. Under a heading, `Repository:` places a sub-issue in another repository, and `Blocked by:` lists the sub-issues that must be merged first, by their position in the draft (1 is the first sub-issue) or by URL. A draft with no sub-issues is work that is meant to fit in one pull request.
 
-A body may show a diagram, written as `![alternative text](./file.png)`, with the file next to the draft. It is an illustration of the text and is uploaded with the issue.
+A body may show images, written as `![alternative text](./file.png)`, with the file next to the draft: a diagram, or a screenshot of a screen the issue is about. They illustrate the text and are uploaded with the issue.
 
 ## What to check
 
@@ -24,7 +24,7 @@ A body may show a diagram, written as `![alternative text](./file.png)`, with th
 
 **Is the order right?** Check that each `Blocked by:` is real, and look for dependencies that are missing: a sub-issue that uses something another one introduces. Check that the sub-issues can be worked on from top to bottom.
 
-**Does each issue stand without its diagrams?** Read each body as if the images were not there, which is how an agent that picks up the issue reads it. Report anything that is only in a diagram, and any sentence that sends the reader to one instead of saying it. Then open each image with the Read tool and compare it with the text and the code: report a part, a connection or a label that contradicts either. A diagram that is merely unnecessary is an improvement to suggest, not a blocking problem.
+**Does each issue stand without its images?** Read each body as if the images were not there, which is how an agent that picks up the issue reads it. Report anything that is only in an image, such as which screen a bug is on or what is wrong with it, and any sentence that sends the reader to one instead of saying it. Then open each image with the Read tool and compare it with the text and the code: report a part, a connection or a label of a diagram that contradicts either, and a screenshot that shows another screen or state than the text is about. Report as blocking a screenshot that shows what looks like personal data of real people or a credential, since it would be uploaded with the issue. An image that is merely unnecessary is an improvement to suggest, not a blocking problem.
 
 **Do the sub-issues add up to the parent?** Go through the parent's goal and acceptance criteria and find the sub-issue that delivers each part. Report parts that no sub-issue covers, such as migrations, tests, documentation or rollout, and work that appears in two sub-issues. If the draft has no sub-issues, say whether the work really fits in one pull request.
 

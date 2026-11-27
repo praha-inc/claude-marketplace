@@ -140,13 +140,13 @@ How to capture, in this order:
 2. What the session has: a browser tool for a web application, a simulator tool for a mobile one.
 3. A Chromium-based browser run headless (`--headless --screenshot=<file> --window-size=<width>,<height> <url>`), which is enough for a page that needs no sign-in and no interaction.
 
-Write the images as PNG files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.png`, named for what they show. Copy a file the user gave you there too, and ask for the file when they pasted an image into the conversation and you have no path to it. A few images that each show one thing are better than a whole page the reader has to search. Show data that was made to be shown, such as seed data, fixtures or a test account: the images are uploaded to GitHub with the issue, so they must not show personal data of real people, credentials, tokens or anything else the repository would not publish. Stop the servers you started.
+Write what you capture as PNG files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.png`, named for what they show. Copy a file the user gave you there under the same kind of name, in the format it has, and ask for the file when they pasted an image into the conversation and you have no path to it. A few images that each show one thing are better than a whole page the reader has to search. Show data that was made to be shown, such as seed data, fixtures or a test account: the images are uploaded to GitHub with the issue, so they must not show personal data of real people, credentials, tokens or anything else the repository would not publish. Stop the servers you started.
 
 Open each image with the Read tool before using it. It must show the screen and the state the body is about, fully rendered, and not a spinner, an error page or a sign-in form. When the screen turns out to differ from what the draft says, such as a bug that does not reproduce, the draft is what is wrong: go back to step 2 or 3.
 
 Then:
 
-- Put `![<alternative text>](./<short-slug>-<name>.png)` in the body whose text it illustrates, next to that text, with an alternative text that names the screen and its state. A screen one sub-issue changes goes in that sub-issue, not in the parent.
+- Put `![<alternative text>](./<file name>)` in the body whose text it illustrates, next to that text, with an alternative text that names the screen and its state. A screen one sub-issue changes goes in that sub-issue, not in the parent.
 - Leave the text as it was. The body must still say in words which screen it is, how to reach it, and what is wrong or what is to change: the person or agent who picks up the issue may read only the text.
 - Run the dry run of step 6 again. It checks that every image a body shows is a file next to the draft.
 

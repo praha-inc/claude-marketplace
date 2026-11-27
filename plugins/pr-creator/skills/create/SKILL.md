@@ -59,7 +59,7 @@ Naming, the internals of a function, how to write a test: these are not risky de
 
 - Check `git status`. If there are uncommitted changes that are not part of this work, stop and ask, rather than carrying someone's unfinished work into the pull request or moving it aside.
 - Find the base branch: the repository's default branch, unless the user or the issue names another.
-- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 10 needs.
+- If the current branch is the base branch, update it (`git pull --ff-only`) and create a branch from it. Name it the way the repository does: look at the contributing guide, the workflows under `.github/workflows/` that check branch names, and the branches of recent pull requests (`gh pr list --state merged --limit 10 --json headRefName,title,labels`). The same output shows the conventions for titles and labels, which step 11 needs.
 - If the current branch is already a branch for this work, stay on it.
 
 ## 4. Implement
@@ -129,9 +129,9 @@ Mark the start of the review first, before the first round. Do it once for each 
 node "${CLAUDE_SKILL_DIR}/scripts/start-self-review.ts"
 ```
 
-It prints the `descriptionFile`, the path the description of the pull request is written to in step 8. It is in a new temporary directory, so the description cannot be committed by accident. Keep the path: steps 8 to 10 need it.
+It prints the `descriptionFile`, the path the description of the pull request is written to in step 8. It is in a new temporary directory, so the description cannot be committed by accident. Keep the path: steps 8 to 11 need it.
 
-From this command on, the plugin's Stop hook takes the run as unfinished until step 10 has created the pull request. When the turn ends before that, it blocks the stop and sends you back to the step you stopped at. It is a safety net, not a step: do not end the turn expecting it to carry you on. It cannot tell why the turn ended, so it also sends you back when you stop on purpose: to wait for a review skill that runs in the background, to ask the user, or because this step tells you to stop and report. Say in one sentence why you stopped, and stop: a stop that follows with no tool use in between is let through.
+From this command on, the plugin's Stop hook takes the run as unfinished until step 11 has created the pull request. When the turn ends before that, it blocks the stop and sends you back to the step you stopped at. It is a safety net, not a step: do not end the turn expecting it to carry you on. It cannot tell why the turn ended, so it also sends you back when you stop on purpose: to wait for a review skill that runs in the background, to ask the user, or because this step tells you to stop and report. Say in one sentence why you stopped, and stop: a stop that follows with no tool use in between is let through.
 
 Run both of these skills on the branch's changes with the Skill tool, one after the other, in this conversation rather than in a subagent, because they start their own subagents:
 
@@ -182,18 +182,54 @@ If the change deliberately leaves out something the issue asks for, it is "part 
 
 ## 8. Write the description
 
-Write the description to the `descriptionFile` that step 6 printed. If you no longer have the path, run `start-self-review.ts` again and use the new one. If the file cannot be written there, because the session may not write outside the working tree, write it to a place in the working tree that git ignores or that you will not commit, and use that path for the description and the diagram from here on. The `descriptionFile` of step 6 stays the one to pass to `end-self-review.ts`, and the files you wrote elsewhere are yours to delete in step 10. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
+Write the description to the `descriptionFile` that step 6 printed. If you no longer have the path, run `start-self-review.ts` again and use the new one. If the file cannot be written there, because the session may not write outside the working tree, write it to a place in the working tree that git ignores or that you will not commit, and use that path for the description and its images from here on. The `descriptionFile` of step 6 stays the one to pass to `end-self-review.ts`, and the files you wrote elsewhere are yours to delete in step 11. Follow the repository's pull request template if it has one (`.github/pull_request_template.md` and its variants). Otherwise use these sections, leaving out any that would be empty:
 
 - **Summary**: what changed and why, for a reader who has not seen this conversation.
 - The line from step 7, on its own line.
+- **Screenshots**: added in step 9, when the change alters what a user sees.
 - **Decisions**: the risky decisions and what was chosen, with the reason, including a requirement that could be read in more than one way and the reading that was implemented. When running on your own, mark the ones nobody confirmed, so the reviewer knows where to look first.
 - **Architecture**: only when something is to be said: a departure from `ARCHITECTURE.md` or from the existing structure that was kept, with the reason, and places where the document turned out to be silent or out of date.
 - **Self-review**: how many rounds were run, what they found and fixed in a line each, and the findings judged not valid with their reason, so the reviewer does not raise them again.
 - **Test plan**: the checks that were run and their result, and what was not verified.
 
-## 9. Decide on a diagram
+## 9. Decide on screenshots
 
-The description is finished and says everything in words. Now decide whether it also shows a diagram. This is a step of its own because a decision made in passing here is always "no": the review is clean, the description is written, and the pull request is one command away. It ends with a decision you state before step 10.
+The description is finished and says in words what changed. Now decide whether it also shows what the change looks like. This is a step of its own because a decision made in passing here is always "no": the review is clean, the description is written, and the pull request is one command away. It ends with a decision you state before step 10.
+
+A reviewer cannot see a screen in a diff. Without an image they either check the branch out and run it, or approve a layout they have never looked at. Taking the screenshot is also the one check of this run that looks at the result and not at the code.
+
+The change has something to show when it adds or alters something that is rendered for a person: a page, a screen or a component, its layout, its styles, its text, or one of its states, such as empty, loading or error. Decide from what the change does to the screen, not from which files it touches: a stylesheet, a design token or a translation changes screens without a component in the diff.
+
+It has nothing to show when nothing that is rendered changes: backend logic, a refactoring that leaves the screens as they were, build configuration, tests. Do not attach an unchanged screen to show that it still works. That is what the test plan says.
+
+What to capture:
+
+- **After**: each screen or state the change adds or alters, with the change in view. A few images that each show one thing are better than a whole page the reviewer has to search. When the change is about a width or a theme, such as a mobile layout or dark mode, capture it there.
+- **Before**, for a screen that existed already, in the same state and at the same size as the after, so the difference is the only thing that differs. Take it from the base branch in a worktree of its own (`git worktree add <directory outside the working tree> <base>`), which leaves the branch as it is, and remove the worktree afterwards. Leave the before out when running the base costs more than the image shows, for instance when it needs a second database.
+
+How to capture, in this order:
+
+1. What the repository already has for it: a Storybook, end-to-end tests that can take screenshots, a preview command. Start the application the way its instructions say.
+2. What the session has: a browser tool for a web application, a simulator tool for a mobile one.
+3. A Chromium-based browser run headless (`--headless --screenshot=<file> --window-size=<width>,<height> <url>`), which is enough for a page that needs no sign-in and no interaction.
+
+Write the images as PNG files next to the description file, named for what they show, such as `invoice-list-empty-after.png`. Show data that was made to be shown: seed data, fixtures, a test account. An image is uploaded to GitHub, and when running on your own nobody sees it before that, so never capture personal data of real people, credentials, tokens or anything else the repository would not publish. Stop the servers you started.
+
+Open each image with the Read tool before using it. It must show the change, fully rendered, and not a spinner, an error page or a sign-in form. If it shows that the change does not work, such as a broken layout or an element that is missing, that is a valid finding like one from the review: fix it, run the checks, commit, go back to step 6, and bring the description up to date.
+
+Then:
+
+- Add a **Screenshots** section under the summary and the line from step 7, or use the place the repository's template has for them. Write each image as `![<alternative text>](./<name>.png)`, with an alternative text that names the screen and its state. Put a before and its after side by side in a table with the columns Before and After. The paths are relative to the description file.
+- Leave the text as it was. What changed on the screen must still be said in words: the images are not shown everywhere the description is read, and an agent that reviews the pull request reads only the text.
+- Add `--attach <path of the PNG>` for each image to the command in step 11. GitHub CLI uploads the files and points the references at them.
+
+State the decision in one line before going on: which screens and states the description shows, or why the change has nothing to show.
+
+Go on without screenshots when the application cannot be run in this session, or when nothing in it can capture a screen. The pull request does not depend on them, but write in the test plan that the screens were not looked at, and say so at the end, since the change did call for them.
+
+## 10. Decide on a diagram
+
+The description is finished and says everything in words. Now decide whether it also shows a diagram. This is a step of its own for the same reason as the last one: a decision made in passing here is always "no". It ends with a decision you state before step 11.
 
 Most pull requests have nothing to draw, and a diagram that carries nothing makes the reviewer look for a point that is not there. But when a change has a shape, the reviewer has to rebuild it from prose and from files the diff shows one at a time, and that costs them more than the diagram costs you. So decide from what the change does, not from whether the description is clear enough without one.
 
@@ -224,13 +260,13 @@ State the decision in one line before going on: what the diagram will show, or w
 
 To draw it, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it what the diagram should show, which parts of that the branch changes against the base branch, and where in the code the parts it leaves as they are can be read. Have it write its files next to the description file. It hands back the path of a PNG and an alternative text. It may also find, once it has read the change, that no diagram helps, and that is a result to accept. Then:
 
-- Put `![<alternative text>](./<name>.png)` under the summary. The path is relative to the description file.
+- Put `![<alternative text>](./<name>.png)` under the summary, above the screenshots when there are any. The path is relative to the description file.
 - Leave the text as it was. Everything the diagram shows must still be said in words: the image is not shown everywhere the description is read, and an agent that reviews the pull request reads only the text.
-- Add `--attach <path of the PNG>` to the command in step 10. GitHub CLI uploads the file and points the reference at it.
+- Add `--attach <path of the PNG>` to the command in step 11. GitHub CLI uploads the file and points the reference at it.
 
 Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The pull request does not depend on it, but say so at the end, since the change did call for one.
 
-## 10. Open the draft pull request
+## 11. Open the draft pull request
 
 Push the branch (`git push -u origin <branch>`) and create the pull request as a draft, with a title and labels in the repository's conventions from step 3:
 
@@ -238,7 +274,9 @@ Push the branch (`git push -u origin <branch>`) and create the pull request as a
 gh pr create --draft --base <base> --title "<title>" --body-file <file>
 ```
 
-If the upload of a diagram fails, the pull request is created all the same and the command exits with an error, with the URL still printed. Do not create it again. Remove the image from the description with `gh pr edit --body-file <file>`, and say so at the end.
+Add an `--attach <path>` for each image steps 9 and 10 put in the description.
+
+If the upload of an image fails, the pull request is created all the same and the command exits with an error, with the URL still printed. Do not create it again. Remove the images that were not uploaded from the description with `gh pr edit --body-file <file>`, and say so at the end.
 
 Then confirm the link, because a closing keyword that GitHub did not recognise fails silently:
 
@@ -246,6 +284,6 @@ Then confirm the link, because a closing keyword that GitHub did not recognise f
 gh pr view --json url,isDraft,closingIssuesReferences
 ```
 
-`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` again when the description shows a diagram, since the file still holds the local path. Then delete the directory of the description file, which holds the files of the diagram as well, with `node "${CLAUDE_SKILL_DIR}/scripts/end-self-review.ts" <descriptionFile>`.
+`closingIssuesReferences` must contain the issue when step 7 chose to close it, and must not when it chose only to refer. Edit the description with `gh pr edit --body-file <file>` if it does not match, passing the same `--attach` flags again when the description shows images, since the file still holds the local paths. Then delete the directory of the description file, which holds the images as well, with `node "${CLAUDE_SKILL_DIR}/scripts/end-self-review.ts" <descriptionFile>`.
 
-Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified. Repeat the decision of step 9 in one line: what the diagram in the description shows, or why the change had nothing to draw, so they can ask for one.
+Finish by telling the user the URL of the pull request, whether merging it will close the issue, the decisions you made without them, how the self-review went, and anything that was left out or could not be verified. Repeat the decisions of steps 9 and 10 in a line each: which screens the screenshots show and what the diagram shows, or why the change had nothing to show or to draw, so they can ask for one.

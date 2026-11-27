@@ -12,7 +12,7 @@ The request, if the user gave one with the command: $ARGUMENTS
 
 Talk to the user in the language they use. Write the issues in the language the repository's existing issues are written in, and ask if that is unclear.
 
-Nothing is created on GitHub until the user approves in step 11. Issues notify people and cannot be cleanly taken back, so everything before that step is reading and writing a local draft.
+Nothing is created on GitHub until the user approves in step 12. Issues notify people and cannot be cleanly taken back, so everything before that step is reading and writing a local draft.
 
 ## 1. Interview
 
@@ -71,7 +71,7 @@ Write each body for a reader who has not seen this conversation. Follow the repo
 - Parent issue: background and reason, goal, scope and what is out of scope, acceptance criteria for the whole, and notes such as decisions made with the user, earlier decisions that still apply (with their links), and assumptions.
 - Sub-issue: what to change and why, pointers to the relevant code (paths and symbols from the investigation, since these save the implementer the search you already did), and acceptance criteria.
 
-Do not list the sub-issues in the parent body, and do not write the dependencies between sub-issues into the bodies. GitHub shows both once the issues are created, from the links the script in step 11 registers.
+Do not list the sub-issues in the parent body, and do not write the dependencies between sub-issues into the bodies. GitHub shows both once the issues are created, from the links the script in step 12 registers.
 
 ## 5. Loop until nothing is missing
 
@@ -79,7 +79,7 @@ Designing the split usually raises new questions: an unclear boundary between tw
 
 ## 6. Write the draft
 
-Write the draft to `.claude/issue-drafts/<short-slug>.md` in the project. Use this exact structure, because the script in step 11 creates the issues from this file:
+Write the draft to `.claude/issue-drafts/<short-slug>.md` in the project. Use this exact structure, because the script in step 12 creates the issues from this file:
 
 ```markdown
 ---
@@ -110,7 +110,7 @@ Body of the third sub-issue.
 ```
 
 - `repository` is where the parent issue, and every sub-issue without its own `Repository:` line, is created.
-- `project` stays empty until step 10.
+- `project` stays empty until step 11.
 - The lines directly under a heading are optional metadata. `Repository:` puts a sub-issue in another repository of the same owner. `Blocked by:` lists, comma separated, the sub-issues that must be merged before this one, each by its position in the draft (1 is the first sub-issue). It can only name sub-issues above it. To depend on an issue that already exists, give its URL instead.
 - A blank line ends the metadata, and everything up to the next `# Issue:` or `# Sub-issue:` heading is the body.
 
@@ -120,9 +120,43 @@ Check the structure of the draft:
 node "${CLAUDE_SKILL_DIR}/scripts/create-issues.ts" --dry-run .claude/issue-drafts/<short-slug>.md
 ```
 
-## 7. Decide on a diagram
+## 7. Decide on screenshots
 
-The draft is finished and says everything in words. Now decide whether a body also shows a diagram. This is a step of its own because a decision made in passing here is always "no": the draft is written, and the review is the next thing to do. It ends with a decision you state before step 8.
+The draft is finished and says in words which screens the work is about. Now decide whether a body also shows them. This is a step of its own because a decision made in passing here is always "no": the draft is written, and the review is the next thing to do. It ends with a decision you state before step 8.
+
+Whoever picks up the issue has to find the screen first: which page, in which state, reached how. A screenshot of how it looks today answers that at a glance. For a bug it is also the record of what was seen, which the text alone leaves to the reader's imagination, and which is gone once someone changes the screen.
+
+The work has something to show when the draft is about something that is rendered for a person:
+
+- **A bug that can be seen**: a broken layout, a wrong text, a state that should not appear. Capture it as it is seen, in the state the steps to reproduce lead to.
+- **A change to a screen or component that exists**: how it looks today, with the part that is to change in view.
+- **Images the user gave you**: a screenshot of the problem, a mockup, a design. They are part of the request. Attach a file as it is. A link to a design tool goes into the body as a link.
+
+It has nothing to show when no screen is involved, as in backend work, a refactoring or tooling, and when the screen does not exist yet and nobody gave a design for it. Do not draw a mockup of your own: a picture of a screen reads as a decision about its design, and nobody made one.
+
+How to capture, in this order:
+
+1. What the repository already has for it: a Storybook, end-to-end tests that can take screenshots, a preview command. Start the application the way its instructions say.
+2. What the session has: a browser tool for a web application, a simulator tool for a mobile one.
+3. A Chromium-based browser run headless (`--headless --screenshot=<file> --window-size=<width>,<height> <url>`), which is enough for a page that needs no sign-in and no interaction.
+
+Write the images as PNG files next to the draft, as `.claude/issue-drafts/<short-slug>-<name>.png`, named for what they show. Copy a file the user gave you there too, and ask for the file when they pasted an image into the conversation and you have no path to it. A few images that each show one thing are better than a whole page the reader has to search. Show data that was made to be shown, such as seed data, fixtures or a test account: the images are uploaded to GitHub with the issue, so they must not show personal data of real people, credentials, tokens or anything else the repository would not publish. Stop the servers you started.
+
+Open each image with the Read tool before using it. It must show the screen and the state the body is about, fully rendered, and not a spinner, an error page or a sign-in form. When the screen turns out to differ from what the draft says, such as a bug that does not reproduce, the draft is what is wrong: go back to step 2 or 3.
+
+Then:
+
+- Put `![<alternative text>](./<short-slug>-<name>.png)` in the body whose text it illustrates, next to that text, with an alternative text that names the screen and its state. A screen one sub-issue changes goes in that sub-issue, not in the parent.
+- Leave the text as it was. The body must still say in words which screen it is, how to reach it, and what is wrong or what is to change: the person or agent who picks up the issue may read only the text.
+- Run the dry run of step 6 again. It checks that every image a body shows is a file next to the draft.
+
+State the decision in one line before going on: which screens the draft shows and in which bodies, or why the work has nothing to show.
+
+Go on without screenshots when the application cannot be run in this session, or when nothing in it can capture a screen. The issue does not depend on them, but tell the user in step 10 which screens you could not capture: they are often looking at the very screen, and can add the image themselves.
+
+## 8. Decide on a diagram
+
+The draft is finished and says everything in words. Now decide whether a body also shows a diagram. This is a step of its own for the same reason as the last one: a decision made in passing here is always "no". It ends with a decision you state before step 9.
 
 Most issues have nothing to draw, and a diagram that carries nothing makes the reader look for a point that is not there. But when the work has a shape, the person who picks up the issue has to rebuild it from prose before they can start, and that costs them more than the diagram costs you. So decide from what the work is, not from whether the draft is clear enough without one.
 
@@ -146,7 +180,7 @@ When you are unsure, name the boxes the diagram would have and the lines between
 
 **That the text already says it is not a reason to leave the diagram out.** A body has to say everything in words with or without a diagram, so by that test no issue would ever have one. You are also the wrong judge of it: you wrote the text with the code and the investigation in your head, and the reader has neither.
 
-A diagram goes in the body whose text it illustrates, so one that shows how the sub-issues meet goes in the parent issue. When the parent issue already exists and the draft does not write its body, do not move that diagram into a sub-issue. Tell the user in step 9 what it would show, and add it to the parent only when they ask for it.
+A diagram goes in the body whose text it illustrates, so one that shows how the sub-issues meet goes in the parent issue. When the parent issue already exists and the draft does not write its body, do not move that diagram into a sub-issue. Tell the user in step 10 what it would show, and add it to the parent only when they ask for it.
 
 State the decision in one line before going on: what the diagram will show and which body it goes in, or why the work has nothing to draw.
 
@@ -156,19 +190,19 @@ To draw it, invoke the `diagram-writer:draw` skill with the Skill tool. Tell it 
 - Leave the text as it was. Everything the diagram shows must still be said in words: the person or agent who picks up the issue may read only the text, and a body that says "see the diagram" has lost what it was meant to say. When the diagram brings together what several sub-issues say, the body it goes in may not say it yet: write those few sentences next to the image.
 - Run the dry run of step 6 again. It checks that every image a body shows is a file next to the draft.
 
-Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The issue does not depend on it, but tell the user in step 9, since the work did call for one.
+Go on without a diagram when the skill is not available in this session, or when it reports that it could not render one. The issue does not depend on it, but tell the user in step 10, since the work did call for one.
 
-## 8. Have the draft reviewed
+## 9. Have the draft reviewed
 
 Start the `issue-planner:reviewer` agent and give it only the path of the draft. Do not tell it what the user asked for, what you investigated, or what you think of the draft. It reads the draft the way the eventual implementer will, with none of this conversation, so whatever it cannot work out is something the issue fails to say. Context from you would hide exactly those gaps.
 
-Fix the blocking problems it reports. If fixing one needs an answer from the user or more investigation, go back to the step it belongs to. When a change to the draft makes a diagram say something the text no longer says, draw it again with `diagram-writer:draw` or take it out. After changes that alter the scope, the split or the dependencies, run the review again on the new draft. Use your judgment on its suggested improvements, and carry any question you cannot settle into step 9.
+Fix the blocking problems it reports. If fixing one needs an answer from the user or more investigation, go back to the step it belongs to. When a change to the draft makes a diagram say something the text no longer says, draw it again with `diagram-writer:draw` or take it out, and take out a screenshot of a screen the draft is no longer about. After changes that alter the scope, the split or the dependencies, run the review again on the new draft. Use your judgment on its suggested improvements, and carry any question you cannot settle into step 10.
 
-## 9. Ask the user to review
+## 10. Ask the user to review
 
-Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. Repeat the decision of step 7 in one line: the path of the diagram's PNG, so they can look at it, or why the work had nothing to draw, so they can ask for one. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 8.
+Tell the user the path of the draft and give a short summary in the conversation: the parent title, the sub-issues in order with one line each and what blocks what, the assumptions you made, and anything the reviewer raised that needs their decision. Repeat the decisions of steps 7 and 8 in a line each: the paths of the screenshots and of the diagram's PNG, so they can look at them before they are uploaded, or why the work had nothing to show or to draw, so they can ask for one. Name the screens you could not capture. Ask them to review it. They may edit the file directly or tell you what to change. Read the file again after they respond, because their edits are the source of truth. If the feedback changes the scope or the split, go back to the step it affects, including the review in step 9.
 
-## 10. Find a GitHub Project
+## 11. Find a GitHub Project
 
 Look for projects the issues could be added to:
 
@@ -180,7 +214,7 @@ The output lists the open projects linked to the repository in `linked`, and the
 
 If the script reports that the token lacks the project scope, tell the user they can grant it by running `gh auth refresh -s project` themselves, and ask whether to do that or to continue without a project. If there are no projects at all, say so and move on without asking.
 
-## 11. Create the issues
+## 12. Create the issues
 
 Ask for approval to create the issues, stating how many will be created, in which repositories, and the project they will be added to. Create them only after the user clearly approves. Approval of an earlier draft does not cover a draft that changed since.
 
@@ -192,4 +226,4 @@ The script creates the parent issue and the sub-issues in order, links each sub-
 
 An image a body shows is uploaded with its issue. That needs push access to the repository of the issue, which creating an issue alone does not. When an upload fails, the issue is created all the same, with a body that still shows the local path, and the script says so. Remove the image from the body of that issue with `gh issue edit`, and tell the user: the issue is complete without it.
 
-Finish by giving the user the URL of the parent issue and of each sub-issue, and mention anything that did not succeed. Then delete the draft file and the files of its diagrams, unless the user wants to keep them, since their content now lives on GitHub.
+Finish by giving the user the URL of the parent issue and of each sub-issue, and mention anything that did not succeed. Then delete the draft file and the files of its images, unless the user wants to keep them, since their content now lives on GitHub.

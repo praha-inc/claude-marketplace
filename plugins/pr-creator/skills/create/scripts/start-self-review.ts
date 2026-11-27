@@ -3,7 +3,7 @@
  * description of the pull request is to be written to once the review is clean.
  *
  * The file is in a new temporary directory. Handing out the path here keeps the description,
- * and the files of a diagram written next to it, out of the repository without the caller
+ * and the images written next to it, out of the repository without the caller
  * having to run any other command for it. The directory is also how stop-hook.ts tells that
  * a self-review was started: from here on, the run is not finished until the pull request
  * is opened.

@@ -78,7 +78,7 @@ Whoever picks up an issue has to find the screen first. When the work is about s
 
 Claude captures them with what the repository has for it, such as a Storybook or end-to-end tests that take screenshots, then with a browser or simulator tool of the session, then with a headless Chromium-based browser, using seed data or a test account rather than data of real people. When it asks you to review the draft, it tells you where the images are, so you can look at them before they are uploaded, and which screens it could not capture, so you can add one yourself.
 
-A screenshot is written like a diagram, as `![alternative text](./<slug>-<name>.png)`, and uploaded the same way. The body still says in words which screen it is, how to reach it and what is to change.
+A screenshot is written like a diagram, as `![alternative text](./<slug>-<name>.png)`, and uploaded the same way. An image you gave keeps the format it has. The body still says in words which screen it is, how to reach it and what is to change.
 
 ### Diagrams
 

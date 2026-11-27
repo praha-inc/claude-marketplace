@@ -205,7 +205,7 @@ It has nothing to show when nothing that is rendered changes: backend logic, a r
 What to capture:
 
 - **After**: each screen or state the change adds or alters, with the change in view. A few images that each show one thing are better than a whole page the reviewer has to search. When the change is about a width or a theme, such as a mobile layout or dark mode, capture it there.
-- **Before**, for a screen that existed already, in the same state and at the same size as the after, so the difference is the only thing that differs. Take it from the base branch in a worktree of its own (`git worktree add <directory outside the working tree> <base>`), which leaves the branch as it is, and remove the worktree afterwards. Leave the before out when running the base costs more than the image shows, for instance when it needs a second database.
+- **Before**, for a screen that existed already, in the same state and at the same size as the after, so the difference is the only thing that differs. Take it from the base branch in a worktree of its own (`git worktree add --detach <directory outside the working tree> <base>`, with the base as the remote has it, such as `origin/main`), which leaves the branch as it is, and remove the worktree afterwards with `git worktree remove`. Leave the before out when running the base costs more than the image shows, for instance when it needs a second database.
 
 How to capture, in this order:
 
@@ -215,7 +215,7 @@ How to capture, in this order:
 
 Write the images as PNG files next to the description file, named for what they show, such as `invoice-list-empty-after.png`. Show data that was made to be shown: seed data, fixtures, a test account. An image is uploaded to GitHub, and when running on your own nobody sees it before that, so never capture personal data of real people, credentials, tokens or anything else the repository would not publish. Stop the servers you started.
 
-Open each image with the Read tool before using it. It must show the change, fully rendered, and not a spinner, an error page or a sign-in form. If it shows that the change does not work, such as a broken layout or an element that is missing, that is a valid finding like one from the review: fix it, run the checks, commit, go back to step 6, and bring the description up to date.
+Open each image with the Read tool before using it. It must show the change, fully rendered, and not a spinner, an error page or a sign-in form. If it shows that the change does not work, such as a broken layout or an element that is missing, that is a valid finding like one from the review: fix it, run the checks, commit, go back to step 6, and bring the description up to date. Capture the screens again after any change to the code that follows a screenshot, from this step or from the review: an image taken before a fix shows what is no longer there.
 
 Then:
 

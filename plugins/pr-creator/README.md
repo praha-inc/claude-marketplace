@@ -81,7 +81,7 @@ GitHub closes issues only from pull requests merged into the default branch. Wit
 
 A reviewer cannot see a screen in a diff. When the change adds or alters something that is rendered for a person (a page, a component, its layout, styles or text, or one of its states), Claude captures it after the self-review is clean and adds a Screenshots section to the description. A change to backend logic, a refactoring that leaves the screens as they were, or configuration gets none.
 
-- **What**: each screen or state the change adds or alters. For a screen that existed already, a before from the base branch, taken in a separate worktree, is shown next to the after.
+- **What**: each screen or state the change adds or alters. For a screen that existed already, a before from the base branch, taken in a separate worktree, is shown next to the after. Screenshots are taken again when the code changes after them.
 - **How**: with what the repository has for it, such as a Storybook or end-to-end tests that take screenshots, then with a browser or simulator tool of the session, then with a headless Chromium-based browser.
 - **Data**: seed data, fixtures or a test account. Claude does not capture personal data of real people or credentials, since the images are uploaded to GitHub.
 
